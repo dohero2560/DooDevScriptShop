@@ -11,7 +11,8 @@ const winston = require('winston');
 const fetch = require('node-fetch');
 const Log = require('./models/Log');
 const multer = require('multer');
-const promptpay = require('promptpay-qr');
+const generatePayload = require('promptpay-qr');
+const QRCode = require('qrcode');
 
 const app = express();
 
@@ -142,9 +143,14 @@ app.post('/api/generate-promptpay-qr', async (req, res) => {
     try {
         const { amount } = req.body;
         const promptPayNumber = process.env.PROMPTPAY_NUMBER;
-        const qrCode = promptpay.generate(promptPayNumber, { amount: parseFloat(amount) });
         
-        res.json({ qrCodeUrl: qrCode });
+        // สร้าง payload สำหรับ PromptPay
+        const payload = generatePayload(promptPayNumber, { amount: parseFloat(amount) });
+        
+        // สร้าง QR Code จาก payload
+        const qrCodeUrl = await QRCode.toDataURL(payload);
+        
+        res.json({ qrCodeUrl });
     } catch (err) {
         console.error('Error generating QR code:', err);
         res.status(500).json({ error: 'Failed to generate QR code' });
