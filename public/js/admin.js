@@ -1006,69 +1006,6 @@ class AdminPanel {
             this.loadLogs({ date: e.target.value });
         });
     }
-
-    async loadPayments() {
-        try {
-            const response = await fetch('/api/admin/payments', {
-                credentials: 'include'
-            });
-            const payments = await response.json();
-            this.renderPayments(payments);
-        } catch (error) {
-            console.error('Error loading payments:', error);
-            this.showError('Failed to load payments');
-        }
-    }
-
-    renderPayments(payments) {
-        const tbody = document.querySelector('#paymentsTable tbody');
-        tbody.innerHTML = payments.map(payment => `
-            <tr>
-                <td>${new Date(payment.createdAt).toLocaleString()}</td>
-                <td>${payment.userId.username}<br><small>${payment.userId.discordId}</small></td>
-                <td>${payment.amount} THB</td>
-                <td>${payment.points} points</td>
-                <td>
-                    <a href="${payment.slipImage}" target="_blank">
-                        <img src="${payment.slipImage}" alt="Payment Slip" style="max-width: 100px;">
-                    </a>
-                </td>
-                <td>${this.getStatusBadge(payment.status)}</td>
-                <td>
-                    ${payment.status === 'pending' ? `
-                        <button onclick="adminPanel.approvePayment('${payment._id}')" class="btn btn-success">
-                            <i class="fas fa-check"></i> Approve
-                        </button>
-                        <button onclick="adminPanel.rejectPayment('${payment._id}')" class="btn btn-danger">
-                            <i class="fas fa-times"></i> Reject
-                        </button>
-                    ` : ''}
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    async approvePayment(paymentId) {
-        if (!confirm('Are you sure you want to approve this payment?')) return;
-        
-        try {
-            const response = await fetch(`/api/admin/payments/${paymentId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    status: 'approved',
-                    note: 'Payment approved by admin'
-                })
-            });
-
-            if (!response.ok) throw new Error('Failed to approve payment');
-            this.showSuccess('Payment approved successfully');
-            this.loadPayments();
-        } catch (error) {
-            console.error('Error approving payment:', error);
-            this.showError('Failed to approve payment');
-        }
-    }
 }
 
 // Initialize the admin panel

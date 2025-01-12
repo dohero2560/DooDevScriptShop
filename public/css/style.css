@@ -397,12 +397,11 @@ main {
 }
 
 .modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
+    background-color: #fff;
+    margin: 10% auto;
     padding: 20px;
     border-radius: 8px;
-    width: 80%;
-    max-width: 600px;
+    max-width: 500px;
     position: relative;
 }
 
@@ -467,7 +466,7 @@ main {
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
@@ -805,47 +804,42 @@ main {
     }
 }
 
-/* Payment Wrapper */
-.payment-wrapper {
+/* Top-up Modal Styles */
+.modal {
+    display: none;
     position: fixed;
-    right: 0;
-    top: 0;
-    width: 300px;
-    height: 100vh;
-    background: #fff;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    padding: 20px;
-    overflow-y: auto;
     z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
 }
 
-.payment-header {
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    position: relative;
+}
+
+#qrCodeContainer {
     text-align: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-}
-
-.qr-section {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.qr-code {
-    width: 200px;
-    height: 200px;
-    margin: 0 auto 10px;
-    display: block;
-}
-
-.payment-form {
-    padding: 15px;
-    background: #f8f9fa;
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
     border-radius: 8px;
 }
 
+#qrCode {
+    max-width: 300px;
+    margin: 0 auto;
+}
+
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
@@ -859,35 +853,4 @@ main {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
-}
-
-/* Adjust main content to accommodate wrapper */
-.main-content {
-    margin-right: 300px;
-    transition: margin-right 0.3s ease;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .payment-wrapper {
-        width: 100%;
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
-    }
-
-    .payment-wrapper.active {
-        transform: translateX(0);
-    }
-
-    .main-content {
-        margin-right: 0;
-    }
-
-    .toggle-payment {
-        display: block;
-        position: fixed;
-        right: 20px;
-        bottom: 20px;
-        z-index: 1001;
-    }
 }

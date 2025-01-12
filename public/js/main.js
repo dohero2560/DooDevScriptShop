@@ -381,3 +381,89 @@ async function updateServerIP(purchaseId) {
         alert('Error updating server IP: ' + error.message);
     }
 } 
+
+// Top-up Modal Functions
+const topupModal = document.getElementById('topupModal');
+const topupBtn = document.getElementById('topupBtn');
+const closeTopup = topupModal.querySelector('.close');
+const topupForm = document.getElementById('topupForm');
+const qrCodeContainer = document.getElementById('qrCodeContainer');
+const slipUpload = document.getElementById('slipUpload');
+const slipPreview = document.getElementById('slipPreview');
+
+// Show modal
+topupBtn.onclick = () => {
+    topupModal.style.display = 'block';
+}
+
+// Close modal
+closeTopup.onclick = () => {
+    topupModal.style.display = 'none';
+}
+
+// Generate QR Code when amount is entered
+document.getElementById('amount').addEventListener('change', async (e) => {
+    const amount = e.target.value;
+    if (amount > 0) {
+        try {
+            const response = await fetch('/api/generate-promptpay-qr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ amount })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('qrCode').src = data.qrCodeUrl;
+                qrCodeContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error generating QR code:', error);
+            showNotification('Failed to generate QR code', 'error');
+        }
+    }
+});
+
+// Preview uploaded slip
+slipUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            slipPreview.src = e.target.result;
+            slipPreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Handle form submission
+topupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('amount', document.getElementById('amount').value);
+    formData.append('slip', slipUpload.files[0]);
+
+    try {
+        const response = await fetch('/api/topup', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            showNotification('Payment submitted successfully', 'success');
+            topupModal.style.display = 'none';
+            topupForm.reset();
+            slipPreview.style.display = 'none';
+            qrCodeContainer.style.display = 'none';
+        } else {
+            throw new Error('Failed to submit payment');
+        }
+    } catch (error) {
+        console.error('Error submitting payment:', error);
+        showNotification('Failed to submit payment', 'error');
+    }
+}); 
