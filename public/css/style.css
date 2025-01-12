@@ -804,3 +804,90 @@ main {
         justify-content: center;
     }
 }
+
+/* Payment Wrapper */
+.payment-wrapper {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 300px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.payment-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.qr-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.qr-code {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 10px;
+    display: block;
+}
+
+.payment-form {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Adjust main content to accommodate wrapper */
+.main-content {
+    margin-right: 300px;
+    transition: margin-right 0.3s ease;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .payment-wrapper {
+        width: 100%;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .payment-wrapper.active {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        margin-right: 0;
+    }
+
+    .toggle-payment {
+        display: block;
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 1001;
+    }
+}
