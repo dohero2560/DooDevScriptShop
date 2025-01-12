@@ -467,3 +467,76 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 }); 
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ... existing code ...
+
+    // Slip upload preview
+    const slipUpload = document.getElementById('slipUpload');
+    const slipPreview = document.getElementById('slipPreview');
+    const submitTopupBtn = document.getElementById('submitTopupBtn');
+    const topupStatus = document.getElementById('topupStatus');
+    const topupStatusText = document.getElementById('topupStatusText');
+
+    if (slipUpload) {
+        slipUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    slipPreview.src = e.target.result;
+                    slipPreview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    if (submitTopupBtn) {
+        submitTopupBtn.addEventListener('click', async function() {
+            const amount = document.getElementById('topupAmount').value;
+            const slipFile = slipUpload.files[0];
+
+            if (!amount || !slipFile) {
+                alert('Please enter amount and upload slip');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('amount', amount);
+            formData.append('slip', slipFile);
+
+            try {
+                submitTopupBtn.disabled = true;
+                submitTopupBtn.textContent = 'Submitting...';
+
+                const response = await fetch('/api/topup/request', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    topupStatus.style.display = 'block';
+                    topupStatusText.textContent = 'Payment submitted and waiting for admin approval';
+                    topupStatusText.style.color = '#2196F3';
+                    
+                    // Reset form
+                    slipUpload.value = '';
+                    slipPreview.style.display = 'none';
+                    document.getElementById('topupAmount').value = '100';
+                } else {
+                    throw new Error(result.message || 'Failed to submit payment');
+                }
+            } catch (error) {
+                topupStatus.style.display = 'block';
+                topupStatusText.textContent = error.message;
+                topupStatusText.style.color = '#f44336';
+            } finally {
+                submitTopupBtn.disabled = false;
+                submitTopupBtn.textContent = 'Submit Payment';
+            }
+        });
+    }
+}); 

@@ -45,7 +45,7 @@ router.post('/api/payments/create', isAuthenticated, async (req, res) => {
     const { amount } = req.body;
     
     // Validate amount
-    if (!amount || amount < 20 || amount > 100000) {
+    if (!amount || amount < 1 || amount > 100000) {
       return res.status(400).json({ 
         error: 'Invalid amount. Must be between 20 and 100,000 THB' 
       });

@@ -789,3 +789,41 @@ pre {
     white-space: pre-wrap;
     word-wrap: break-word;
 } 
+
+/* TOPUP Status Badges */
+.status-pending {
+    background: #ffd700;
+    color: #000;
+}
+
+.status-approved {
+    background: #4CAF50;
+    color: white;
+}
+
+.status-rejected {
+    background: #f44336;
+    color: white;
+}
+
+/* TOPUP Action Buttons */
+.approve-btn {
+    background: #4CAF50;
+}
+
+.reject-btn {
+    background: #f44336;
+}
+
+/* Slip Modal */
+#slipModal .modal-content {
+    max-width: 800px;
+    padding: 20px;
+}
+
+#slipModal img {
+    display: block;
+    margin: 0 auto;
+    max-height: 80vh;
+    object-fit: contain;
+} 

@@ -4,6 +4,7 @@ class AdminPanel {
         this.currentSection = 'scripts';
         this.initializeModals();
         this.setupLogFilters();
+        this.loadTopupRequests();
     }
 
     async init() {
@@ -1050,6 +1051,119 @@ class AdminPanel {
             this.showError('Failed to verify payment');
         }
     }
+
+    async loadTopupRequests() {
+        try {
+            const response = await fetch('/api/admin/topup-requests', {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) throw new Error('Failed to fetch topup requests');
+            
+            const requests = await response.json();
+            this.renderTopupRequests(requests);
+        } catch (err) {
+            console.error('Error loading topup requests:', err);
+            this.showError('Failed to load topup requests');
+        }
+    }
+
+    renderTopupRequests(requests) {
+        const tbody = document.querySelector('#topupTable tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = requests.map(request => `
+            <tr>
+                <td>${new Date(request.createdAt).toLocaleString()}</td>
+                <td>
+                    ${request.userId?.username || 'Unknown'}
+                    <br>
+                    <small class="text-muted">Discord ID: ${request.userId?.discordId || 'N/A'}</small>
+                </td>
+                <td>${request.amount} THB</td>
+                <td>
+                    <img src="${request.slipUrl}" alt="Payment Slip" 
+                         style="max-width: 100px; cursor: pointer;"
+                         onclick="adminPanel.showSlipModal('${request.slipUrl}')">
+                </td>
+                <td>
+                    <span class="status-badge status-${request.status.toLowerCase()}">
+                        ${request.status}
+                    </span>
+                </td>
+                <td>
+                    ${request.status === 'PENDING' ? `
+                        <button class="action-btn approve-btn" onclick="adminPanel.approveTopup('${request._id}')">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="action-btn reject-btn" onclick="adminPanel.rejectTopup('${request._id}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    ` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async approveTopup(requestId) {
+        try {
+            const response = await fetch(`/api/admin/topup/${requestId}/approve`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Failed to approve topup');
+
+            await this.loadTopupRequests();
+            this.showSuccess('Topup request approved successfully');
+        } catch (err) {
+            console.error('Error approving topup:', err);
+            this.showError('Failed to approve topup request');
+        }
+    }
+
+    async rejectTopup(requestId) {
+        try {
+            const response = await fetch(`/api/admin/topup/${requestId}/reject`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Failed to reject topup');
+
+            await this.loadTopupRequests();
+            this.showSuccess('Topup request rejected successfully');
+        } catch (err) {
+            console.error('Error rejecting topup:', err);
+            this.showError('Failed to reject topup request');
+        }
+    }
+
+    showSlipModal(imageUrl) {
+        // Create modal if it doesn't exist
+        let modal = document.getElementById('slipModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'slipModal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <img src="" alt="Payment Slip" style="max-width: 100%;">
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Add close button functionality
+            modal.querySelector('.close').onclick = () => {
+                modal.style.display = 'none';
+            };
+        }
+
+        // Update image and show modal
+        modal.querySelector('img').src = imageUrl;
+        modal.style.display = 'block';
+    }
 }
 
 // Initialize the admin panel
@@ -1102,3 +1216,66 @@ document.querySelector('.entity-type-filter')?.addEventListener('change', (e) =>
 document.querySelector('.date-filter')?.addEventListener('change', (e) => {
     adminPanel.loadLogs({ date: e.target.value });
 }); 
+
+
+document.addEventListener('DOMContentLoaded', async function() {
+    const requestsContainer = document.getElementById('topupRequests');
+
+    async function loadTopupRequests() {
+        try {
+            const response = await fetch('/api/admin/topup-requests');
+            const requests = await response.json();
+
+            requestsContainer.innerHTML = requests.map(request => `
+                <div class="topup-request" style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                    <p>User: ${request.username}</p>
+                    <p>Amount: ฿${request.amount}</p>
+                    <p>Date: ${new Date(request.createdAt).toLocaleString()}</p>
+                    <img src="${request.slipUrl}" style="max-width: 200px; margin: 10px 0;">
+                    <div class="actions">
+                        <button onclick="approveTopup('${request.id}')" class="primary-btn">Approve</button>
+                        <button onclick="rejectTopup('${request.id}')" class="danger-btn">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading topup requests:', error);
+        }
+    }
+
+    window.approveTopup = async function(requestId) {
+        try {
+            const response = await fetch(`/api/admin/topup/${requestId}/approve`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                loadTopupRequests(); // Reload the list
+            } else {
+                throw new Error('Failed to approve topup');
+            }
+        } catch (error) {
+            alert('Error approving topup: ' + error.message);
+        }
+    }
+
+    window.rejectTopup = async function(requestId) {
+        try {
+            const response = await fetch(`/api/admin/topup/${requestId}/reject`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                loadTopupRequests(); // Reload the list
+            } else {
+                throw new Error('Failed to reject topup');
+            }
+        } catch (error) {
+            alert('Error rejecting topup: ' + error.message);
+        }
+    }
+
+    // Load requests initially
+    loadTopupRequests();
+
+    // Refresh every 30 seconds
+    setInterval(loadTopupRequests, 30000);
+});

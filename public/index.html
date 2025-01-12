@@ -70,12 +70,15 @@
                     <label>Amount (THB)</label>
                     <input type="number" id="topupAmount" min="1" step="1" value="100">
                 </div>
-                <button id="generateQRBtn" class="primary-btn">Generate QR Code</button>
+                <div class="form-group">
+                    <label>Upload Payment Slip</label>
+                    <input type="file" id="slipUpload" accept="image/*">
+                    <img id="slipPreview" style="max-width: 200px; display: none; margin-top: 10px;">
+                </div>
+                <button id="submitTopupBtn" class="primary-btn">Submit Payment</button>
                 
-                <div id="qrCodeContainer" style="display: none; text-align: center; margin-top: 20px;">
-                    <img id="qrCodeImage" style="max-width: 200px; margin: 0 auto;">
-                    <p>Reference: <span id="paymentReference"></span></p>
-                    <p>Amount: ฿<span id="paymentAmount"></span></p>
+                <div id="topupStatus" style="display: none; margin-top: 20px;">
+                    <p>Status: <span id="topupStatusText"></span></p>
                 </div>
             </div>
         </div>
