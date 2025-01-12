@@ -1188,15 +1188,22 @@ app.post('/api/purchases/:purchaseId/server-ip', async (req, res) => {
 
 // Admin Middleware
 const isAdmin = async (req, res, next) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        // Check if user is logged in
+        if (!req.session.user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        // Check if user is admin
+        if (!req.session.user.isAdmin) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        next();
+    } catch (error) {
+        console.error('Admin middleware error:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-    
-    if (!req.user.isAdmin) {
-        return res.status(403).json({ error: 'Not authorized' });
-    }
-    
-    next();
 };
 
 // Check specific permission
