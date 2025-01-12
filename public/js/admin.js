@@ -3,6 +3,7 @@ class AdminPanel {
         this.init();
         this.currentSection = 'scripts';
         this.initializeModals();
+        this.setupLogFilters();
     }
 
     async init() {
@@ -870,10 +871,8 @@ class AdminPanel {
                 credentials: 'include'
             });
             
-            if (!response.ok) {
-                throw new Error('Failed to fetch logs');
-            }
-
+            if (!response.ok) throw new Error('Failed to fetch logs');
+            
             const data = await response.json();
             this.renderLogs(data.logs);
         } catch (err) {
@@ -889,7 +888,7 @@ class AdminPanel {
         tbody.innerHTML = logs.map(log => `
             <tr>
                 <td>${new Date(log.timestamp).toLocaleString()}</td>
-                <td>${log.adminId?.username || 'Unknown'}</td>
+                <td>${log.adminId?.username || 'System'}</td>
                 <td>${this.formatAction(log.action)}</td>
                 <td>${this.formatEntityType(log.entityType)}</td>
                 <td>
@@ -939,11 +938,15 @@ class AdminPanel {
                 </div>
             </div>
         `;
+        
         document.body.appendChild(modal);
         modal.style.display = 'block';
 
-        modal.querySelector('.close').onclick = () => {
-            modal.remove();
+        const closeBtn = modal.querySelector('.close');
+        closeBtn.onclick = () => modal.remove();
+        
+        window.onclick = (e) => {
+            if (e.target === modal) modal.remove();
         };
     }
 
@@ -986,6 +989,20 @@ class AdminPanel {
             item.classList.remove('active');
         });
         document.querySelector(`[data-section="${sectionName}"]`)?.classList.add('active');
+    }
+
+    setupLogFilters() {
+        document.querySelector('.log-type-filter')?.addEventListener('change', (e) => {
+            this.loadLogs({ action: e.target.value });
+        });
+
+        document.querySelector('.entity-type-filter')?.addEventListener('change', (e) => {
+            this.loadLogs({ entityType: e.target.value });
+        });
+
+        document.querySelector('.date-filter')?.addEventListener('change', (e) => {
+            this.loadLogs({ date: e.target.value });
+        });
     }
 }
 

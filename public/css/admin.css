@@ -686,3 +686,55 @@ td small {
 .badge-warning { background-color: #ffc107; color: black; }
 .badge-danger { background-color: #dc3545; color: white; }
 .badge-info { background-color: #17a2b8; color: white; } 
+
+/* Log Styles */
+#logsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#logsTable th,
+#logsTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#logsTable th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.log-details {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.log-details-btn {
+    color: var(--primary-color);
+    cursor: pointer;
+    margin-left: 8px;
+}
+
+.log-type-filter,
+.entity-type-filter,
+.date-filter {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.badge-success { background-color: #28a745; color: white; }
+.badge-warning { background-color: #ffc107; color: black; }
+.badge-danger { background-color: #dc3545; color: white; }
+.badge-info { background-color: #17a2b8; color: white; } 
