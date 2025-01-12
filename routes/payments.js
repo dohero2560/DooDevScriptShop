@@ -87,27 +87,27 @@ router.post('/create', isAuthenticated, async (req, res) => {
 });
 
 // Check payment status
-router.get('/api/payments/:reference', isAuthenticated, async (req, res) => {
-  try {
-    const payment = await Payment.findOne({ 
-      reference: req.params.reference,
-      userId: req.user._id
-    });
+router.get('/status/:reference', isAuthenticated, async (req, res) => {
+    try {
+        const payment = await Payment.findOne({ 
+            reference: req.params.reference,
+            userId: req.user._id
+        });
 
-    if (!payment) {
-      return res.status(404).json({ error: 'Payment not found' });
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' });
+        }
+
+        res.json({
+            status: payment.status,
+            amount: payment.amount,
+            createdAt: payment.createdAt
+        });
+
+    } catch (error) {
+        console.error('Payment status check error:', error);
+        res.status(500).json({ error: 'Failed to check payment status' });
     }
-
-    res.json({
-      status: payment.status,
-      amount: payment.amount,
-      createdAt: payment.createdAt
-    });
-
-  } catch (error) {
-    console.error('Payment status check error:', error);
-    res.status(500).json({ error: 'Failed to check payment status' });
-  }
 });
 
 module.exports = router; 

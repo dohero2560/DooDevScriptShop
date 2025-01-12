@@ -517,20 +517,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // เพิ่มฟังก์ชัน checkPaymentStatus
 async function checkPaymentStatus(reference) {
     try {
-        const response = await fetch(`/api/payments/${reference}`, {
+        const response = await fetch(`/api/payments/status/${reference}`, {
             headers: {
                 'Accept': 'application/json'
             },
             credentials: 'include'
         });
 
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Server returned non-JSON response');
+        if (!response.ok) {
+            throw new Error(`Payment status check failed: ${response.status}`);
         }
-        
-        if (!response.ok) throw new Error('Failed to check payment status');
-        
+
         const data = await response.json();
         
         if (data.status === 'completed') {
