@@ -9,7 +9,7 @@ const topupSchema = new mongoose.Schema({
     amount: {
         type: Number,
         required: true,
-        min: 1
+        min: 0
     },
     slipUrl: {
         type: String,
@@ -25,10 +25,13 @@ const topupSchema = new mongoose.Schema({
         ref: 'User'
     },
     approvedAt: Date,
+    rejectionReason: String,
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-module.exports = mongoose.model('Topup', topupSchema);
+const Topup = mongoose.model('Topup', topupSchema);
+
+module.exports = Topup;

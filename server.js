@@ -14,16 +14,40 @@ const paymentRoutes = require('./routes/payments');
 const topupRoutes = require('./routes/topup');
 const User = require('./models/User');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
+
+// เพิ่มการตรวจสอบ environment variables ที่จำเป็น
+const requiredEnvVars = [
+    'MONGODB_URI',
+    'SESSION_SECRET',
+    'CORS_ORIGIN',
+    'DISCORD_CLIENT_ID',
+    'DISCORD_CLIENT_SECRET',
+    'DISCORD_CALLBACK_URL'
+];
+
+requiredEnvVars.forEach(varName => {
+    if (!process.env[varName]) {
+        console.error(`Missing required environment variable: ${varName}`);
+        process.exit(1);
+    }
+});
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie']
 }));
+
+// เพิ่ม OPTIONS handler
+app.options('*', cors());
 
 // Session middleware (ต้องอยู่ก่อน routes)
 app.use(session({
@@ -32,18 +56,19 @@ app.use(session({
     saveUninitialized: false,
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
-        ttl: 24 * 60 * 60 // เก็บ session 1 วัน
+        ttl: 24 * 60 * 60
     }),
     cookie: {
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 1 วัน
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/api/payments', paymentRoutes);
 app.use('/api/topup', topupRoutes);
-app.use('/uploads', express.static('public/uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Serve static files from public directory
 app.use(express.static('public'));
@@ -1919,4 +1944,37 @@ app.get('/api/admin/logs/:logId', isAdmin, async (req, res) => {
 // Catch-all route for client-side routing
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// เพิ่ม error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ 
+            error: 'File upload error',
+            details: err.message 
+        });
+    }
+
+    // Handle specific types of errors
+    if (err.name === 'ValidationError') {
+        return res.status(400).json({
+            error: 'Validation error',
+            details: err.message
+        });
+    }
+
+    if (err.name === 'UnauthorizedError') {
+        return res.status(401).json({
+            error: 'Authentication error',
+            details: 'Invalid or missing token'
+        });
+    }
+
+    // Generic error response
+    res.status(500).json({ 
+        error: 'Something went wrong!',
+        details: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
 });
