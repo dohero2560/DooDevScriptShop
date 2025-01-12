@@ -40,7 +40,7 @@ const hasPermission = (permission) => {
 };
 
 // Generate QR Code for payment
-router.post('/api/payments/create', isAuthenticated, async (req, res) => {
+router.post('/create', isAuthenticated, async (req, res) => {
   try {
     const { amount } = req.body;
     
@@ -79,7 +79,10 @@ router.post('/api/payments/create', isAuthenticated, async (req, res) => {
 
   } catch (error) {
     console.error('Payment creation error:', error);
-    res.status(500).json({ error: 'Failed to create payment' });
+    res.status(500).json({ 
+      error: 'Failed to create payment',
+      details: error.message 
+    });
   }
 });
 

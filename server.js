@@ -18,8 +18,13 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public'));
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true
+}));
+
+// Session middleware (ต้องอยู่ก่อน routes)
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
