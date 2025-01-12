@@ -40,16 +40,14 @@ async function checkLoginStatus() {
         const loginBtn = document.getElementById('loginBtn');
         const userInfo = document.getElementById('userInfo');
         const purchasesLink = document.getElementById('purchasesLink');
+        const topupLink = document.getElementById('topupLink');
         
-        // ตรวจสอบว่า elements มีอยู่จริงก่อนใช้งาน
-        if (!loginBtn || !userInfo || !purchasesLink) {
-            console.warn('Required DOM elements not found');
-            return;
-        }
+        if (!loginBtn || !userInfo || !purchasesLink || !topupLink) return;
 
         if (data.loggedIn && data.user) {
             loginBtn.style.display = 'none';
             purchasesLink.style.display = 'block';
+            topupLink.style.display = 'block';
             
             // สร้าง avatar element และรอให้โหลดเสร็จก่อนแสดงผล
             const avatarImg = new Image();
@@ -87,6 +85,7 @@ async function checkLoginStatus() {
             loginBtn.style.display = 'block';
             userInfo.style.display = 'none';
             purchasesLink.style.display = 'none';
+            topupLink.style.display = 'none';
         }
     } catch (error) {
         console.error('Error checking login status:', error);
@@ -443,3 +442,28 @@ async function checkPaymentStatus(reference) {
 
 // Add event listener for QR generation
 document.getElementById('generateQRBtn').addEventListener('click', generatePaymentQR); 
+
+// เพิ่ม event listener สำหรับ TOPUP link
+document.addEventListener('DOMContentLoaded', function() {
+    const topupLink = document.getElementById('topupLink');
+    const topupModal = document.getElementById('topupModal');
+    const closeBtn = topupModal?.querySelector('.close');
+    
+    if (topupLink && topupModal) {
+        topupLink.onclick = () => {
+            topupModal.style.display = 'block';
+        };
+        
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                topupModal.style.display = 'none';
+            };
+        }
+        
+        window.onclick = (event) => {
+            if (event.target == topupModal) {
+                topupModal.style.display = 'none';
+            }
+        };
+    }
+}); 
