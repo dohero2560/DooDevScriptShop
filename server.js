@@ -1385,6 +1385,156 @@ const verifyToken = async (req, res, next) => {
     }
 };
 
+// Replace the old endpoint with an admin-only version
+app.post('/api/admin/users/:userId/points/add', isAdmin, hasPermission('manage_points'), async (req, res) => {
+    const { userId } = req.params;
+    const { amount } = req.body;
+
+    if (!amount || isNaN(amount)) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        user.points = (user.points || 0) + Number(amount);
+        await user.save();
+
+        // Send webhook notification for points addition
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                embeds: [{
+                    title: '💰 Points Added',
+                    color: 0x00FF00,
+                    fields: [
+                        { name: 'User', value: `${user.username}#${user.discriminator}` },
+                        { name: 'Amount Added', value: `${amount} points` },
+                        { name: 'New Balance', value: `${user.points} points` },
+                        { name: 'Admin', value: `${req.user.username}#${req.user.discriminator}` }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            });
+        }
+        
+        res.json({ 
+            success: true,
+            points: user.points,
+            added: amount,
+            username: user.username
+        });
+    } catch (err) {
+        console.error('Error adding points:', err);
+        res.status(500).json({ error: 'Failed to add points' });
+    }
+});
+
+// Add endpoint to remove points (admin only)
+app.post('/api/admin/users/:userId/points/remove', isAdmin, hasPermission('manage_points'), async (req, res) => {
+    const { userId } = req.params;
+    const { amount } = req.body;
+
+    if (!amount || isNaN(amount)) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user.points < amount) {
+            return res.status(400).json({ 
+                error: 'Insufficient points',
+                current: user.points,
+                requested: amount
+            });
+        }
+
+        user.points = (user.points || 0) - Number(amount);
+        await user.save();
+
+        // Send webhook notification for points removal
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                embeds: [{
+                    title: '💰 Points Removed',
+                    color: 0xFF0000,
+                    fields: [
+                        { name: 'User', value: `${user.username}#${user.discriminator}` },
+                        { name: 'Amount Removed', value: `${amount} points` },
+                        { name: 'New Balance', value: `${user.points} points` },
+                        { name: 'Admin', value: `${req.user.username}#${req.user.discriminator}` }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            });
+        }
+
+        res.json({ 
+            success: true,
+            points: user.points,
+            removed: amount,
+            username: user.username
+        });
+    } catch (err) {
+        console.error('Error removing points:', err);
+        res.status(500).json({ error: 'Failed to remove points' });
+    }
+});
+
+// Add endpoint to set points directly (admin only)
+app.post('/api/admin/users/:userId/points/set', isAdmin, hasPermission('manage_points'), async (req, res) => {
+    const { userId } = req.params;
+    const { amount } = req.body;
+
+    if (amount === undefined || isNaN(amount)) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const oldPoints = user.points;
+        user.points = Number(amount);
+        await user.save();
+
+        // Send webhook notification for points set
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                embeds: [{
+                    title: '💰 Points Set',
+                    color: 0x0000FF,
+                    fields: [
+                        { name: 'User', value: `${user.username}#${user.discriminator}` },
+                        { name: 'Old Balance', value: `${oldPoints} points` },
+                        { name: 'New Balance', value: `${amount} points` },
+                        { name: 'Admin', value: `${req.user.username}#${req.user.discriminator}` }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            });
+        }
+
+        res.json({ 
+            success: true,
+            points: user.points,
+            oldPoints,
+            username: user.username
+        });
+    } catch (err) {
+        console.error('Error setting points:', err);
+        res.status(500).json({ error: 'Failed to set points' });
+    }
+});
+
 // Port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

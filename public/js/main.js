@@ -63,7 +63,6 @@ async function checkLoginStatus() {
                             <span class="username">${data.user.username}</span>
                             <span class="points">💰 ${data.user.points || 0} Points</span>
                         </div>
-                        <button onclick="addPoints()" class="add-points-btn">Add Points</button>
                         <a href="/auth/logout" class="logout-btn">Logout</a>
                     </div>
                 `;
@@ -77,7 +76,6 @@ async function checkLoginStatus() {
                             <span class="username">${data.user.username}</span>
                             <span class="points">💰 ${data.user.points || 0} Points</span>
                         </div>
-                        <button onclick="addPoints()" class="add-points-btn">Add Points</button>
                         <a href="/auth/logout" class="logout-btn">Logout</a>
                     </div>
                 `;
@@ -324,29 +322,6 @@ function showNotification(message, type = 'success') {
 
 // เรียกใช้ฟังก์ชันเมื่อโหลดหน้า
 document.addEventListener('DOMContentLoaded', checkLoginStatus); 
-
-// Add points function
-async function addPoints() {
-    const amount = prompt('Enter amount of points to add:');
-    if (!amount) return;
-
-    try {
-        const response = await fetch('/api/user/points/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ amount: Number(amount) })
-        });
-        
-        if (!response.ok) throw new Error('Failed to add points');
-        
-        checkLoginStatus(); // Refresh the display
-    } catch (error) {
-        console.error('Error adding points:', error);
-        alert('Failed to add points. Please try again.');
-    }
-} 
 
 // Function to update cart count
 async function updateCartCount() {
