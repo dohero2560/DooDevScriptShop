@@ -67,7 +67,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/api/payments', paymentRoutes);
-app.use('/api/topup', topupRoutes);
+app.use('/api/topup/request', topupRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Serve static files from public directory

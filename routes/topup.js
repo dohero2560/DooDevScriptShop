@@ -37,7 +37,7 @@ const upload = multer({
 });
 
 // Route for uploading slip
-router.post('/upload', isAuthenticated, upload.single('slip'), async (req, res) => {
+router.post('/', isAuthenticated, upload.single('slip'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -57,6 +57,12 @@ router.post('/upload', isAuthenticated, upload.single('slip'), async (req, res) 
 
         await topup.save();
 
+        console.log('Topup created:', {
+            userId: topup.userId,
+            amount: topup.amount,
+            slipUrl: topup.slipUrl
+        });
+
         res.status(201).json({
             success: true,
             topup: {
@@ -70,7 +76,10 @@ router.post('/upload', isAuthenticated, upload.single('slip'), async (req, res) 
 
     } catch (err) {
         console.error('Error in topup upload:', err);
-        res.status(500).json({ error: 'Error creating topup request' });
+        res.status(500).json({ 
+            error: 'Error creating topup request',
+            details: err.message 
+        });
     }
 });
 
