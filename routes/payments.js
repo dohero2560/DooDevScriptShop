@@ -3,11 +3,41 @@ const router = express.Router();
 const generatePayload = require('promptpay-qr');
 const QRCode = require('qrcode');
 const Payment = require('../models/Payment');
-const { isAuthenticated } = require('../middleware/auth');
 const crypto = require('crypto');
 
 // PromptPay number
 const PROMPTPAY_NUMBER = "0648835624";
+
+// Authentication Middleware
+const isAuthenticated = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    next();
+};
+
+// Admin Middleware
+const isAdmin = async (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    if (!req.user.isAdmin) {
+        return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    next();
+};
+
+// Check specific permission
+const hasPermission = (permission) => {
+    return (req, res, next) => {
+        if (!req.user.permissions.includes(permission)) {
+            return res.status(403).json({ error: 'Permission denied' });
+        }
+        next();
+    };
+};
 
 // Generate QR Code for payment
 router.post('/api/payments/create', isAuthenticated, async (req, res) => {
