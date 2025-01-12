@@ -1098,13 +1098,22 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
             }
         }
 
-        // บันทึก log การเปลี่ยนแปลง
+        // เรียกใช้ logAdminAction แบบใหม่
         await logAdminAction(
+            req,
             'update',
             'user',
             updatedUser._id,
-            changeLog,
-            req.user._id
+            {
+                before: previousData,
+                after: {
+                    role: updatedUser.role,
+                    permissions: updatedUser.permissions,
+                    points: updatedUser.points,
+                    isAdmin: updatedUser.isAdmin
+                },
+                changedFields: changeLog.changedFields
+            }
         );
 
         res.json({
@@ -1587,21 +1596,71 @@ app.post('/api/admin/users/:userId/points/set', isAdmin, hasPermission('manage_p
 });
 
 // Add logging middleware
-async function logAdminAction(action, entityType, entityId, changes, adminId) {
+async function logAdminAction(req, action, entityType, entityId, changes = null) {
     try {
-        await Log.create({
+        const logData = {
             action,
             entityType,
             entityId,
+            adminId: req.user._id,
             changes,
-            adminId
-        });
+            metadata: {
+                path: req.path,
+                method: req.method
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+        };
+
+        const log = new Log(logData);
+        await log.save();
+
+        // ส่ง webhook ถ้ามีการกำหนดไว้
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            const webhookContent = {
+                embeds: [{
+                    title: `📝 Admin Action: ${action.toUpperCase()}`,
+                    color: getColorForAction(action),
+                    fields: [
+                        { name: 'Action', value: action },
+                        { name: 'Entity Type', value: entityType },
+                        { name: 'Admin', value: `${req.user.username}#${req.user.discriminator}` },
+                        { name: 'Timestamp', value: new Date().toISOString() }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            // เพิ่ม changed fields ถ้ามีการเปลี่ยนแปลง
+            if (changes && changes.changedFields) {
+                webhookContent.embeds[0].fields.push({
+                    name: 'Changed Fields',
+                    value: changes.changedFields.join(', ') || 'No changes'
+                });
+            }
+
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, webhookContent);
+        }
+
+        return log;
     } catch (error) {
         console.error('Error logging admin action:', error);
+        // ไม่ throw error เพื่อให้การทำงานหลักดำเนินต่อไปได้
     }
 }
 
-// Port
+// Utility function to get color for different actions
+function getColorForAction(action) {
+    const colors = {
+        create: 0x00FF00, // เขียว
+        update: 0xFFA500, // ส้ม
+        delete: 0xFF0000, // แดง
+        view: 0x0000FF   // น้ำเงิน
+    };
+    return colors[action] || 0x808080; // เทาถ้าไม่มีสีที่กำหนด
+}
+
+// Portเ
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
@@ -1629,41 +1688,145 @@ app.use((req, res, next) => {
 // Add near other admin routes
 app.get('/api/admin/logs', isAdmin, async (req, res) => {
     try {
-        const { action, entityType, date, page = 1, limit = 50 } = req.query;
-        const skip = (page - 1) * limit;
-        
-        // Build query conditions
+        const {
+            action,
+            entityType,
+            startDate,
+            endDate,
+            adminId,
+            page = 1,
+            limit = 50,
+            sort = 'desc'
+        } = req.query;
+
+        // สร้าง query conditions
         const query = {};
-        if (action && action !== 'all') query.action = action;
-        if (entityType && entityType !== 'all') query.entityType = entityType;
-        if (date) {
-            const startDate = new Date(date);
-            const endDate = new Date(date);
-            endDate.setDate(endDate.getDate() + 1);
-            query.timestamp = { $gte: startDate, $lt: endDate };
+        if (action) query.action = action;
+        if (entityType) query.entityType = entityType;
+        if (adminId) query.adminId = adminId;
+        
+        // จัดการช่วงวันที่
+        if (startDate || endDate) {
+            query.timestamp = {};
+            if (startDate) query.timestamp.$gte = new Date(startDate);
+            if (endDate) {
+                const endDateTime = new Date(endDate);
+                endDateTime.setHours(23, 59, 59, 999);
+                query.timestamp.$lte = endDateTime;
+            }
         }
 
-        // Fetch logs with pagination and populate admin details
+        // คำนวณ pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // ดึงข้อมูล logs
         const logs = await Log.find(query)
-            .sort({ timestamp: -1 })
+            .sort({ timestamp: sort === 'desc' ? -1 : 1 })
             .skip(skip)
-            .limit(Number(limit))
-            .populate('adminId', 'username discriminator');
+            .limit(parseInt(limit))
+            .populate('adminId', 'username discriminator')
+            .lean();
 
-        // Get total count for pagination
+        // นับจำนวน logs ทั้งหมด
         const total = await Log.countDocuments(query);
 
+        // เพิ่มข้อมูลเพิ่มเติมสำหรับแต่ละ log
+        const enhancedLogs = await Promise.all(logs.map(async (log) => {
+            let entityDetails = null;
+            
+            // ดึงข้อมูลเพิ่มเติมตาม entityType
+            try {
+                switch (log.entityType) {
+                    case 'user':
+                        entityDetails = await User.findById(log.entityId)
+                            .select('username discriminator')
+                            .lean();
+                        break;
+                    case 'script':
+                        entityDetails = await Script.findById(log.entityId)
+                            .select('name version')
+                            .lean();
+                        break;
+                    case 'purchase':
+                        entityDetails = await Purchase.findById(log.entityId)
+                            .select('license serverIP')
+                            .lean();
+                        break;
+                }
+            } catch (err) {
+                console.error(`Error fetching details for ${log.entityType}:`, err);
+            }
+
+            return {
+                ...log,
+                entityDetails
+            };
+        }));
+
         res.json({
-            logs,
+            logs: enhancedLogs,
             pagination: {
                 total,
                 pages: Math.ceil(total / limit),
-                current: page,
-                limit
+                currentPage: parseInt(page),
+                limit: parseInt(limit)
+            },
+            filters: {
+                action,
+                entityType,
+                startDate,
+                endDate,
+                adminId
             }
         });
     } catch (err) {
-        console.error('Error fetching logs:', err);
+        console.error('Error fetching admin logs:', err);
         res.status(500).json({ error: 'Error fetching activity logs' });
+    }
+});
+
+// เพิ่ม route สำหรับดูรายละเอียด log เฉพาะรายการ
+app.get('/api/admin/logs/:logId', isAdmin, async (req, res) => {
+    try {
+        const log = await Log.findById(req.params.logId)
+            .populate('adminId', 'username discriminator')
+            .lean();
+
+        if (!log) {
+            return res.status(404).json({ error: 'Log not found' });
+        }
+
+        // ดึงข้อมูลเพิ่มเติมตาม entityType
+        let entityDetails = null;
+        try {
+            switch (log.entityType) {
+                case 'user':
+                    entityDetails = await User.findById(log.entityId)
+                        .select('username discriminator email')
+                        .lean();
+                    break;
+                case 'script':
+                    entityDetails = await Script.findById(log.entityId)
+                        .select('name version price')
+                        .lean();
+                    break;
+                case 'purchase':
+                    entityDetails = await Purchase.findById(log.entityId)
+                        .populate('userId', 'username discriminator')
+                        .populate('scriptId', 'name')
+                        .lean();
+                    break;
+            }
+        } catch (err) {
+            console.error(`Error fetching details for ${log.entityType}:`, err);
+        }
+
+        res.json({
+            ...log,
+            entityDetails
+        });
+    } catch (err) {
+        console.error('Error fetching log details:', err);
+        res.status(500).json({ error: 'Error fetching log details' });
     }
 });
