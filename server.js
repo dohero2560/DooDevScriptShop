@@ -1032,6 +1032,12 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
     try {
         const { role, permissions, points } = req.body;
         
+        // ดึงข้อมูล user เดิมก่อนอัพเดท
+        const originalUser = await User.findById(req.params.userId);
+        if (!originalUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
         // กำหนดค่า isAdmin ตาม role โดยตรง
         const isAdmin = role === 'admin' || role === 'superadmin';
         
@@ -1041,11 +1047,11 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
                 role,
                 permissions,
                 points: Number(points),
-                isAdmin // กำหนดค่า isAdmin ตาม role
+                isAdmin
             }
         };
 
-        const user = await User.findByIdAndUpdate(
+        const updatedUser = await User.findByIdAndUpdate(
             req.params.userId,
             updateData,
             { 
@@ -1054,31 +1060,54 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
             }
         );
 
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
         // ตรวจสอบและปรับปรุงสิทธิ์ตาม role
         if (role === 'user') {
-            user.permissions = []; // ล้างสิทธิ์ทั้งหมดสำหรับ user ปกติ
+            updatedUser.permissions = [];
         } else if (role === 'admin' || role === 'superadmin') {
-            // ตรวจสอบว่ามีสิทธิ์พื้นฐานครบหรือไม่
             const basicPermissions = ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points'];
             const newPermissions = new Set([...permissions, ...basicPermissions]);
-            user.permissions = Array.from(newPermissions);
+            updatedUser.permissions = Array.from(newPermissions);
         }
 
-        await user.save(); // บันทึกการเปลี่ยนแปลง
+        await updatedUser.save();
+
+        // สร้าง object เก็บการเปลี่ยนแปลง
+        const changes = {
+            before: {
+                role: originalUser.role,
+                permissions: originalUser.permissions,
+                points: originalUser.points,
+                isAdmin: originalUser.isAdmin
+            },
+            after: {
+                role: updatedUser.role,
+                permissions: updatedUser.permissions,
+                points: updatedUser.points,
+                isAdmin: updatedUser.isAdmin
+            },
+            changedFields: Object.keys(changes.after).filter(key => 
+                JSON.stringify(changes.before[key]) !== JSON.stringify(changes.after[key])
+            )
+        };
+
+        // บันทึก log การเปลี่ยนแปลง
+        await logAdminAction(
+            'update',
+            'user',
+            updatedUser._id,
+            changes,
+            req.user._id
+        );
 
         res.json({
             success: true,
             user: {
-                id: user._id,
-                username: user.username,
-                role: user.role,
-                permissions: user.permissions,
-                points: user.points,
-                isAdmin: user.isAdmin
+                id: updatedUser._id,
+                username: updatedUser.username,
+                role: updatedUser.role,
+                permissions: updatedUser.permissions,
+                points: updatedUser.points,
+                isAdmin: updatedUser.isAdmin
             }
         });
     } catch (err) {
@@ -1628,5 +1657,44 @@ app.get('/api/admin/logs', isAdmin, async (req, res) => {
     } catch (err) {
         console.error('Error fetching logs:', err);
         res.status(500).json({ error: 'Error fetching activity logs' });
+    }
+});
+
+// อัพเดทสถานะ purchase
+app.put('/api/admin/purchases/:id/status', isAdmin, hasPermission('manage_purchases'), async (req, res) => {
+    try {
+        const { status } = req.body;
+        
+        const originalPurchase = await Purchase.findById(req.params.id);
+        if (!originalPurchase) {
+            return res.status(404).json({ error: 'Purchase not found' });
+        }
+
+        const updatedPurchase = await Purchase.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true }
+        );
+
+        // บันทึก log การเปลี่ยนสถานะ purchase
+        await logAdminAction(
+            'status_change',
+            'purchase',
+            updatedPurchase._id,
+            {
+                before: { status: originalPurchase.status },
+                after: { status: updatedPurchase.status },
+                purchaseDetails: {
+                    license: updatedPurchase.license,
+                    serverIP: updatedPurchase.serverIP
+                }
+            },
+            req.user._id
+        );
+
+        res.json(updatedPurchase);
+    } catch (err) {
+        console.error('Error updating purchase status:', err);
+        res.status(500).json({ error: 'Error updating purchase status' });
     }
 });
