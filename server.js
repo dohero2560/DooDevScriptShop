@@ -132,6 +132,9 @@ passport.use(new DiscordStrategy({
     scope: ['identify', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
+        console.log('Discord Access Token:', accessToken);
+        console.log('Bearer Token for Postman:', `Bearer ${accessToken}`);
+
         let user = await User.findOne({ discordId: profile.id });
         
         // แก้ไขการสร้าง avatarURL
@@ -377,6 +380,20 @@ app.get('/api/purchases', async (req, res) => {
     }
 });
 
+// Utility function to validate IP address
+function isValidIP(ip) {
+    // IPv4 regex pattern
+    const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!ipv4Pattern.test(ip)) return false;
+    
+    // Check each octet
+    const octets = ip.split('.');
+    return octets.every(octet => {
+        const num = parseInt(octet);
+        return num >= 0 && num <= 255;
+    });
+}
+
 // Verify license endpoint
 app.post('/api/verify-license', async (req, res) => {
     const { license, serverIP, resourceName } = req.body;
@@ -385,6 +402,14 @@ app.post('/api/verify-license', async (req, res) => {
         return res.status(400).json({ 
             valid: false,
             error: 'License, Server IP, and Resource Name are required' 
+        });
+    }
+
+    // Validate IP format
+    if (!isValidIP(serverIP)) {
+        return res.status(400).json({
+            valid: false,
+            error: 'Invalid IP address format'
         });
     }
 
@@ -410,6 +435,7 @@ app.post('/api/verify-license', async (req, res) => {
             });
         }
 
+        // อัพเดท serverIP ทุกครั้งที่มีการเรียก API
         purchase.serverIP = serverIP;
         await purchase.save();
 
@@ -1131,6 +1157,42 @@ app.get('/api/admin/purchases/:id', isAdmin, async (req, res) => {
         res.status(500).json({ error: 'Error fetching purchase details' });
     }
 });
+
+// Add this middleware for token verification
+const verifyToken = async (req, res, next) => {
+    try {
+        const bearerHeader = req.headers['authorization'];
+        if (!bearerHeader) {
+            console.log('No Bearer token provided');
+            return res.status(401).json({ error: 'No token provided' });
+        }
+
+        const bearer = bearerHeader.split(' ');
+        const bearerToken = bearer[1];
+        console.log('Received Bearer Token:', bearerToken);
+
+        // ตรวจสอบ token กับ Discord API
+        const response = await fetch('https://discord.com/api/users/@me', {
+            headers: {
+                Authorization: `Bearer ${bearerToken}`
+            }
+        });
+
+        if (!response.ok) {
+            console.log('Invalid token');
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        const userData = await response.json();
+        console.log('Verified Discord User:', userData);
+        
+        req.user = userData;
+        next();
+    } catch (error) {
+        console.error('Token verification error:', error);
+        res.status(500).json({ error: 'Token verification failed' });
+    }
+};
 
 // Port
 const PORT = process.env.PORT || 3000;

@@ -6,3 +6,7 @@
 {"level":"info","message":{"ip":"::1","method":"GET","path":"/img/default-avatar.png"}}
 {"level":"info","message":{"ip":"::1","method":"PUT","path":"/api/admin/purchases/678382cef9858258077588a5/status"}}
 {"level":"info","message":{"ip":"::1","method":"PUT","path":"/api/admin/purchases/678382cef9858258077588a5/status"}}
+{"level":"info","message":{"ip":"::1","method":"GET","path":"/img/default-avatar.png"}}
+{"level":"info","message":{"ip":"::1","method":"GET","path":"/undefined"}}
+{"level":"info","message":{"ip":"::1","method":"GET","path":"/undefined"}}
+{"level":"info","message":{"ip":"::1","method":"GET","path":"/undefined"}}
