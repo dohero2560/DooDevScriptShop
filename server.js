@@ -1038,64 +1038,72 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // เก็บข้อมูลเดิมก่อนการอัพเดท
+        const previousData = {
+            role: originalUser.role,
+            permissions: originalUser.permissions,
+            points: originalUser.points,
+            isAdmin: originalUser.isAdmin
+        };
+
         // กำหนดค่า isAdmin ตาม role โดยตรง
         const isAdmin = role === 'admin' || role === 'superadmin';
         
-        // ตรวจสอบและปรับปรุงสิทธิ์ตาม role
-        let finalPermissions = [];
-        if (role === 'user') {
-            finalPermissions = []; // ล้างสิทธิ์ทั้งหมดสำหรับ user ปกติ
-        } else if (role === 'admin' || role === 'superadmin') {
-            const basicPermissions = ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points'];
-            finalPermissions = Array.from(new Set([...permissions || [], ...basicPermissions]));
-        }
+        // สร้าง update object
+        const updateData = {
+            $set: {
+                role,
+                permissions,
+                points: Number(points),
+                isAdmin
+            }
+        };
 
-        // อัพเดทข้อมูล
         const updatedUser = await User.findByIdAndUpdate(
             req.params.userId,
-            {
-                role,
-                permissions: finalPermissions,
-                points: Number(points) || 0,
-                isAdmin
-            },
+            updateData,
             { 
                 new: true,
                 runValidators: true 
             }
         );
 
-        if (!updatedUser) {
-            return res.status(404).json({ error: 'Failed to update user' });
+        // ตรวจสอบและปรับปรุงสิทธิ์ตาม role
+        if (role === 'user') {
+            updatedUser.permissions = [];
+        } else if (role === 'admin' || role === 'superadmin') {
+            const basicPermissions = ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points'];
+            const newPermissions = new Set([...permissions, ...basicPermissions]);
+            updatedUser.permissions = Array.from(newPermissions);
         }
 
-        // สร้าง object เก็บการเปลี่ยนแปลง
-        const changes = {
-            before: {
-                role: originalUser.role,
-                permissions: originalUser.permissions,
-                points: originalUser.points,
-                isAdmin: originalUser.isAdmin
-            },
+        await updatedUser.save();
+
+        // สร้าง changes object สำหรับ logging
+        const changeLog = {
+            before: previousData,
             after: {
                 role: updatedUser.role,
                 permissions: updatedUser.permissions,
                 points: updatedUser.points,
                 isAdmin: updatedUser.isAdmin
-            }
+            },
+            changedFields: []
         };
 
-        // เพิ่มฟิลด์ changedFields
-        changes.changedFields = Object.keys(changes.after).filter(key => 
-            JSON.stringify(changes.before[key]) !== JSON.stringify(changes.after[key])
-        );
+        // ตรวจสอบฟิลด์ที่มีการเปลี่ยนแปลง
+        for (const key of Object.keys(previousData)) {
+            if (JSON.stringify(previousData[key]) !== JSON.stringify(changeLog.after[key])) {
+                changeLog.changedFields.push(key);
+            }
+        }
 
         // บันทึก log การเปลี่ยนแปลง
         await logAdminAction(
             'update',
             'user',
             updatedUser._id,
-            changes,
+            changeLog,
             req.user._id
         );
 
@@ -1112,10 +1120,7 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
         });
     } catch (err) {
         console.error('Error updating user:', err);
-        res.status(500).json({ 
-            error: 'Error updating user',
-            details: err.message 
-        });
+        res.status(500).json({ error: 'Error updating user' });
     }
 });
 
@@ -1660,44 +1665,5 @@ app.get('/api/admin/logs', isAdmin, async (req, res) => {
     } catch (err) {
         console.error('Error fetching logs:', err);
         res.status(500).json({ error: 'Error fetching activity logs' });
-    }
-});
-
-// อัพเดทสถานะ purchase
-app.put('/api/admin/purchases/:id/status', isAdmin, hasPermission('manage_purchases'), async (req, res) => {
-    try {
-        const { status } = req.body;
-        
-        const originalPurchase = await Purchase.findById(req.params.id);
-        if (!originalPurchase) {
-            return res.status(404).json({ error: 'Purchase not found' });
-        }
-
-        const updatedPurchase = await Purchase.findByIdAndUpdate(
-            req.params.id,
-            { status },
-            { new: true }
-        );
-
-        // บันทึก log การเปลี่ยนสถานะ purchase
-        await logAdminAction(
-            'status_change',
-            'purchase',
-            updatedPurchase._id,
-            {
-                before: { status: originalPurchase.status },
-                after: { status: updatedPurchase.status },
-                purchaseDetails: {
-                    license: updatedPurchase.license,
-                    serverIP: updatedPurchase.serverIP
-                }
-            },
-            req.user._id
-        );
-
-        res.json(updatedPurchase);
-    } catch (err) {
-        console.error('Error updating purchase status:', err);
-        res.status(500).json({ error: 'Error updating purchase status' });
     }
 });
