@@ -1058,10 +1058,17 @@ class AdminPanel {
                 credentials: 'include'
             });
             
-            if (!response.ok) throw new Error('Failed to fetch topup requests');
+            if (!response.ok) {
+                throw new Error('Failed to fetch topup requests');
+            }
+
+            const data = await response.json();
             
-            const requests = await response.json();
-            this.renderTopupRequests(requests);
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to fetch topup requests');
+            }
+
+            this.renderTopupRequests(data.requests);
         } catch (err) {
             console.error('Error loading topup requests:', err);
             this.showError('Failed to load topup requests');
@@ -1069,39 +1076,41 @@ class AdminPanel {
     }
 
     renderTopupRequests(requests) {
-        const tbody = document.querySelector('#topupTable tbody');
-        if (!tbody) return;
+        const container = document.getElementById('topupRequests');
+        if (!container) return;
 
-        tbody.innerHTML = requests.map(request => `
-            <tr>
-                <td>${new Date(request.createdAt).toLocaleString()}</td>
-                <td>
-                    ${request.userId?.username || 'Unknown'}
-                    <br>
-                    <small class="text-muted">Discord ID: ${request.userId?.discordId || 'N/A'}</small>
-                </td>
-                <td>${request.amount} THB</td>
-                <td>
-                    <img src="${request.slipUrl}" alt="Payment Slip" 
-                         style="max-width: 100px; cursor: pointer;"
-                         onclick="adminPanel.showSlipModal('${request.slipUrl}')">
-                </td>
-                <td>
+        if (!requests.length) {
+            container.innerHTML = '<p class="no-data">No topup requests found</p>';
+            return;
+        }
+
+        container.innerHTML = requests.map(request => `
+            <div class="topup-request-item">
+                <div class="request-header">
+                    <h3>${request.userId?.username || 'Unknown User'}</h3>
                     <span class="status-badge status-${request.status.toLowerCase()}">
                         ${request.status}
                     </span>
-                </td>
-                <td>
-                    ${request.status === 'PENDING' ? `
-                        <button class="action-btn approve-btn" onclick="adminPanel.approveTopup('${request._id}')">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="action-btn reject-btn" onclick="adminPanel.rejectTopup('${request._id}')">
-                            <i class="fas fa-times"></i>
-                        </button>
+                </div>
+                <div class="request-details">
+                    <p>Amount: ${request.amount}</p>
+                    <p>Date: ${new Date(request.createdAt).toLocaleString()}</p>
+                    ${request.slipUrl ? `
+                        <img src="${request.slipUrl}" alt="Payment Slip" class="slip-preview" 
+                            onclick="adminPanel.showSlipModal('${request.slipUrl}')">
                     ` : ''}
-                </td>
-            </tr>
+                </div>
+                ${request.status === 'PENDING' ? `
+                    <div class="request-actions">
+                        <button class="approve-btn" onclick="adminPanel.approveTopup('${request._id}')">
+                            Approve
+                        </button>
+                        <button class="reject-btn" onclick="adminPanel.rejectTopup('${request._id}')">
+                            Reject
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
         `).join('');
     }
 
