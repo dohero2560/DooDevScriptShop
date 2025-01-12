@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Payment = require('../models/Payment');
-const { isAdmin } = require('../middleware/auth');
+const { isAdmin, hasPermission } = require('../middleware/auth');
 
 // Get all payments with optional status filter
-router.get('/payments', isAdmin, async (req, res) => {
+router.get('/payments', isAdmin, hasPermission('manage_payments'), async (req, res) => {
     try {
         const query = req.query.status ? { status: req.query.status } : {};
         const payments = await Payment.find(query)
@@ -19,7 +19,7 @@ router.get('/payments', isAdmin, async (req, res) => {
 });
 
 // Reject payment
-router.post('/payment/reject/:paymentId', isAdmin, async (req, res) => {
+router.post('/payment/reject/:paymentId', isAdmin, hasPermission('manage_payments'), async (req, res) => {
     try {
         const payment = await Payment.findById(req.params.paymentId);
         if (!payment) {
