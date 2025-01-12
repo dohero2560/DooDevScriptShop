@@ -3,108 +3,116 @@ const router = express.Router();
 const generatePayload = require('promptpay-qr');
 const QRCode = require('qrcode');
 const User = require('../models/User');
+const Payment = require('../models/Payment');
 
-// PromptPay number for receiving payments
-const PROMPTPAY_ID = '0648835624'; // Replace with your PromptPay number
+const PROMPTPAY_ID = process.env.PROMPTPAY_NUMBER;
+const PAYMENT_EXPIRY_MINUTES = 15; // QR Code หมดอายุใน 15 นาที
 
-// Generate QR Code for payment
-router.post('/api/payments/generate-qr', async (req, res) => {
+// Middleware ตรวจสอบการล็อกอิน
+const isAuthenticated = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนเติมเงิน' });
+    }
+    next();
+};
+
+// Generate QR Code
+router.post('/api/payments/generate-qr', isAuthenticated, async (req, res) => {
     try {
-        console.log('Request body:', req.body); // Debug log
-
-        if (!req.body || typeof req.body.amount === 'undefined') {
-            return res.status(400).json({ 
-                error: 'Missing amount in request body',
-                received: req.body 
-            });
-        }
-
-        const amount = parseFloat(req.body.amount);
+        const { amount } = req.body;
         
-        // Validate amount
-        if (isNaN(amount) || amount < 1) {
-            return res.status(400).json({ 
-                error: 'Invalid amount. Must be a number greater than or equal to 1',
-                received: amount 
-            });
+        if (!amount || amount < 1) {
+            return res.status(400).json({ error: 'จำนวนเงินต้องมากกว่า 1 บาท' });
         }
 
-        // Generate PromptPay payload
+        // สร้างข้อมูลการเติมเงิน
+        const payment = await Payment.create({
+            userId: req.user._id,
+            amount: amount,
+            reference: Date.now().toString(),
+            points: Math.floor(amount), // 1 บาท = 1 point
+            expiresAt: new Date(Date.now() + PAYMENT_EXPIRY_MINUTES * 60000)
+        });
+
+        // สร้าง QR Code
         const payload = generatePayload(PROMPTPAY_ID, { amount });
-        
-        // Generate QR Code
         const qrCode = await QRCode.toDataURL(payload);
         
         res.json({
             success: true,
             qrCode,
             amount,
-            reference: Date.now().toString()
+            reference: payment.reference,
+            promptpayId: PROMPTPAY_ID.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'),
+            expiresAt: payment.expiresAt
         });
+
     } catch (error) {
-        console.error('Error details:', error); // Debug log
-        res.status(500).json({ 
-            error: 'Failed to generate QR code',
-            message: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        console.error('Error:', error);
+        res.status(500).json({ error: 'ไม่สามารถสร้าง QR Code ได้' });
     }
 });
 
-// Verify payment (webhook endpoint for bank notification)
+// ตรวจสอบสถานะการเติมเงิน
+router.get('/api/payments/:reference/status', isAuthenticated, async (req, res) => {
+    try {
+        const payment = await Payment.findOne({ reference: req.params.reference });
+        
+        if (!payment) {
+            return res.status(404).json({ error: 'ไม่พบรายการเติมเงิน' });
+        }
+
+        res.json({
+            status: payment.status,
+            expiresAt: payment.expiresAt
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'ไม่สามารถตรวจสอบสถานะได้' });
+    }
+});
+
+// Webhook สำหรับการยืนยันการชำระเงิน (จะต้องเชื่อมต่อกับระบบธนาคารจริง)
 router.post('/api/payments/verify', async (req, res) => {
     try {
-        console.log('Payment verification request:', req.body); // Debug log
+        const { reference, amount } = req.body;
 
-        const { reference, amount, userId } = req.body;
-        
-        if (!reference || !amount || !userId) {
-            return res.status(400).json({ 
-                error: 'Missing required fields',
-                required: ['reference', 'amount', 'userId'],
-                received: req.body 
-            });
+        const payment = await Payment.findOne({ reference });
+        if (!payment) {
+            return res.status(404).json({ error: 'ไม่พบรายการเติมเงิน' });
         }
 
-        // Add points to user account
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ 
-                error: 'User not found',
-                userId 
-            });
+        if (payment.status !== 'pending') {
+            return res.status(400).json({ error: 'รายการนี้ถูกดำเนินการไปแล้ว' });
         }
 
-        // Convert amount to points (1 baht = 1 point)
-        const points = Math.floor(amount);
-        const previousPoints = user.points;
-        user.points += points;
+        if (new Date() > payment.expiresAt) {
+            payment.status = 'expired';
+            await payment.save();
+            return res.status(400).json({ error: 'QR Code หมดอายุแล้ว' });
+        }
+
+        // อัพเดทสถานะการชำระเงิน
+        payment.status = 'completed';
+        payment.completedAt = new Date();
+        await payment.save();
+
+        // เพิ่ม points ให้ user
+        const user = await User.findById(payment.userId);
+        user.points += payment.points;
         await user.save();
 
-        console.log(`Updated points for user ${userId}: ${previousPoints} -> ${user.points}`); // Debug log
-
-        res.json({ 
-            success: true, 
-            newBalance: user.points,
-            pointsAdded: points,
-            previousBalance: previousPoints
+        res.json({
+            success: true,
+            points: payment.points,
+            newBalance: user.points
         });
+
     } catch (error) {
-        console.error('Payment verification error:', error); // Debug log
-        res.status(500).json({ 
-            error: 'Failed to verify payment',
-            message: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        console.error('Error:', error);
+        res.status(500).json({ error: 'ไม่สามารถยืนยันการชำระเงินได้' });
     }
-});
-
-// Add a test endpoint to check if the route is working
-router.get('/api/payments/test', (req, res) => {
-    res.json({ 
-        status: 'Payments API is working',
-        timestamp: new Date().toISOString()
-    });
 });
 
 module.exports = router; 
