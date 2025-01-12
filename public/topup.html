@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เติมเงิน - FiveM Store</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .payment-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .qr-container {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .qr-code {
+            max-width: 300px;
+            margin: 1rem auto;
+        }
+
+        .amount-input {
+            width: 100%;
+            padding: 0.5rem;
+            margin: 1rem 0;
+            font-size: 1.2rem;
+        }
+
+        .payment-info {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <h1>เติมเงิน</h1>
+        
+        <div class="amount-section">
+            <label for="amount">จำนวนเงิน (บาท)</label>
+            <input type="number" id="amount" class="amount-input" min="1" step="0.01">
+            <button onclick="generateQR()" class="btn btn-primary">สร้าง QR Code</button>
+        </div>
+
+        <div class="qr-container">
+            <img id="qrCode" class="qr-code" style="display: none;">
+            <div class="payment-info" id="paymentInfo" style="display: none;">
+                <p>จำนวนเงิน: <span id="displayAmount">0</span> บาท</p>
+                <p>เลขอ้างอิง: <span id="reference"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generateQR() {
+            const amount = parseFloat(document.getElementById('amount').value);
+            if (!amount || amount < 1) {
+                alert('กรุณาระบุจำนวนเงินที่ถูกต้อง');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/payments/generate-qr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('qrCode').src = data.qrCode;
+                document.getElementById('qrCode').style.display = 'block';
+                document.getElementById('displayAmount').textContent = amount.toFixed(2);
+                document.getElementById('reference').textContent = data.reference;
+                document.getElementById('paymentInfo').style.display = 'block';
+            } catch (error) {
+                alert('เกิดข้อผิดพลาด: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html> 

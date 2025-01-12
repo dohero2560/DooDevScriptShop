@@ -12,8 +12,9 @@ const fetch = require('node-fetch');
 const Log = require('./models/Log');
 
 const app = express();
-
+const paymentsRouter = require('./routes/payments');
 // Middleware
+app.use('/', paymentsRouter);
 app.use(express.json());
 app.use(express.static('public'));
 app.use(cors());
