@@ -400,3 +400,23 @@ document.getElementById('payment-form').addEventListener('submit', async functio
         alert('Error uploading slip');
     }
 }); 
+
+function updateUIForLoggedInUser(user) {
+    // ... โค้ดเดิม ...
+    
+    // แสดงลิงก์เติมเงิน
+    const topupLink = document.getElementById('topupLink');
+    if (topupLink) {
+        topupLink.style.display = 'inline-block';
+    }
+}
+
+function updateUIForLoggedOutUser() {
+    // ... โค้ดเดิม ...
+    
+    // ซ่อนลิงก์เติมเงิน
+    const topupLink = document.getElementById('topupLink');
+    if (topupLink) {
+        topupLink.style.display = 'none';
+    }
+} 
