@@ -255,4 +255,12 @@ router.post('/api/admin/payments/slip/:id/verify', isAdmin, async (req, res) => 
     }
 });
 
+router.post('/upload-slip', upload.single('slipFile'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No file uploaded.');
+    }
+    // Process the uploaded file (e.g., save to database, move to permanent storage)
+    res.json({ message: 'File uploaded successfully', file: req.file });
+});
+
 module.exports = router; 

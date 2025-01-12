@@ -42,6 +42,25 @@
                 <div id="cartItems"></div>
             </div>
         </div>
+
+        <!-- Add Slip Upload Form -->
+        <div id="slipUploadModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Upload Payment Slip</h2>
+                    <span class="close" onclick="closeModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="slipUploadForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="slipFile">Select Slip Image</label>
+                            <input type="file" id="slipFile" name="slipFile" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="primary-btn">Upload</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Notification Container -->
