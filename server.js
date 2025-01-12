@@ -13,6 +13,9 @@ const Log = require('./models/Log');
 const multer = require('multer');
 const generatePayload = require('promptpay-qr');
 const QRCode = require('qrcode');
+const TopUp = require('./models/TopUp');
+const vision = require('@google-cloud/vision');
+const client = new vision.ImageAnnotatorClient();
 
 const app = express();
 
@@ -172,9 +175,29 @@ app.post('/api/topup', upload.single('slip'), async (req, res) => {
         const topup = new TopUp({
             userId: req.user._id,
             amount: req.body.amount,
-            slipPath: req.file.path,
-            status: 'pending'
+            slipPath: req.file.path
         });
+
+        // Try to read slip using OCR
+        try {
+            const [result] = await client.textDetection(req.file.path);
+            const text = result.fullTextAnnotation.text;
+            
+            // Parse slip data (ตัวอย่างการแยกข้อมูล)
+            const bankMatch = text.match(/ธนาคาร(.*?)(?:\n|$)/);
+            const amountMatch = text.match(/จำนวนเงิน\s*([0-9,]+\.[0-9]{2})/);
+            const dateMatch = text.match(/วันที่\s*(\d{2}\/\d{2}\/\d{4})/);
+            
+            topup.slipData = {
+                bankName: bankMatch ? bankMatch[1].trim() : null,
+                transferAmount: amountMatch ? parseFloat(amountMatch[1].replace(',', '')) : null,
+                transferDate: dateMatch ? new Date(dateMatch[1]) : null
+            };
+        } catch (ocrError) {
+            console.error('OCR Error:', ocrError);
+            // OCR failed but we can still save the topup
+        }
+
         await topup.save();
 
         // Log the top-up request
@@ -183,10 +206,64 @@ app.post('/api/topup', upload.single('slip'), async (req, res) => {
             status: 'pending'
         });
 
-        res.json({ success: true, message: 'Top-up request submitted successfully' });
+        res.json({ 
+            success: true, 
+            message: 'Top-up request submitted successfully',
+            topupId: topup._id
+        });
     } catch (err) {
         console.error('Error processing top-up:', err);
         res.status(500).json({ error: 'Failed to process top-up request' });
+    }
+});
+
+// Admin route to get all top-ups
+app.get('/api/admin/topups', isAdmin, async (req, res) => {
+    try {
+        const topups = await TopUp.find()
+            .populate('userId', 'username discriminator')
+            .populate('processedBy', 'username discriminator')
+            .sort('-createdAt');
+        res.json(topups);
+    } catch (err) {
+        res.status(500).json({ error: 'Error fetching top-ups' });
+    }
+});
+
+// Admin route to process top-up
+app.put('/api/admin/topups/:id', isAdmin, async (req, res) => {
+    try {
+        const { status, comment } = req.body;
+        const topup = await TopUp.findById(req.params.id);
+        
+        if (!topup) {
+            return res.status(404).json({ error: 'Top-up not found' });
+        }
+
+        topup.status = status;
+        topup.adminComment = comment;
+        topup.processedBy = req.user._id;
+        topup.processedAt = new Date();
+
+        // If approved, add points to user
+        if (status === 'approved') {
+            const user = await User.findById(topup.userId);
+            user.points += topup.amount;
+            await user.save();
+        }
+
+        await topup.save();
+
+        // Log the action
+        await logAdminAction(req, 'update', 'topup', topup._id, {
+            status,
+            comment
+        });
+
+        res.json({ success: true, message: 'Top-up processed successfully' });
+    } catch (err) {
+        console.error('Error processing top-up:', err);
+        res.status(500).json({ error: 'Failed to process top-up' });
     }
 });
 
