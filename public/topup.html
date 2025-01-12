@@ -286,18 +286,31 @@
                 document.getElementById('displayAmount').textContent = `${amount.toFixed(2)} บาท`;
                 document.getElementById('reference').textContent = data.reference;
                 
+                qrContainer.style.display = 'block';
+                document.getElementById('paymentInfo').style.display = 'block';
+
                 // เริ่มนับถอยหลัง
                 startCountdown(new Date(data.expiresAt));
                 // เริ่มตรวจสอบสถานะ
                 startStatusCheck(data.reference);
-                
-                qrContainer.style.display = 'block';
-                document.getElementById('paymentInfo').style.display = 'block';
             } catch (err) {
                 error.textContent = err.message;
                 error.style.display = 'block';
             } finally {
                 loading.style.display = 'none';
+            }
+        }
+
+        async function checkPaymentStatus(reference) {
+            try {
+                const response = await fetch(`/api/payments/${reference}/status`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+                return null;
             }
         }
 
