@@ -27,9 +27,6 @@
                 <button id="loginBtn">
                     <i class="fab fa-discord"></i> Login with Discord
                 </button>
-                <a href="#" id="addPointsBtn" class="points-btn">
-                    <i class="fas fa-coins"></i> Add Points
-                </a>
             </div>
         </nav>
     </header>
@@ -58,32 +55,26 @@
     <!-- Notification Container -->
     <div id="notificationContainer"></div>
 
-    <!-- Add payment modal -->
-    <div id="paymentModal" class="modal">
+    <!-- Add this inside body but before scripts -->
+    <div id="topupModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Add Points</h2>
+                <h2>Top Up Points</h2>
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="payment-form">
-                    <div class="form-group">
-                        <label>Amount (THB)</label>
-                        <input type="number" id="paymentAmount" min="1" step="1">
-                    </div>
-                    <button id="generateQrBtn" class="primary-btn">Generate QR Code</button>
-                    
-                    <div id="qrCodeContainer" style="display: none;">
-                        <img id="qrCode" alt="PromptPay QR Code">
-                        <p class="qr-instructions">Scan QR code to pay via PromptPay</p>
-                        
-                        <div class="form-group">
-                            <label>Upload Payment Slip</label>
-                            <input type="file" id="slipFile" accept="image/*">
-                        </div>
-                        <button id="uploadSlipBtn" class="primary-btn">Submit Payment</button>
-                    </div>
+                <div class="form-group">
+                    <label>Amount (THB)</label>
+                    <input type="number" id="topupAmount" min="20" max="100000" step="1">
                 </div>
+                <div id="qrCodeContainer" style="text-align: center; display: none;">
+                    <img id="qrCodeImage" style="max-width: 300px;">
+                    <p>Scan with any Mobile Banking app</p>
+                    <p>Reference: <span id="paymentReference"></span></p>
+                    <p>Amount: <span id="paymentAmount"></span> THB</p>
+                    <p>Expires in: <span id="paymentExpiry"></span></p>
+                </div>
+                <button id="generateQRBtn" class="primary-btn">Generate QR Code</button>
             </div>
         </div>
     </div>

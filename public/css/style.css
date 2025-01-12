@@ -804,38 +804,3 @@ main {
         justify-content: center;
     }
 }
-
-/* Payment Modal Styles */
-.points-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--primary-color);
-    color: white;
-    border-radius: 4px;
-    text-decoration: none;
-}
-
-.points-btn:hover {
-    background: var(--secondary-color);
-}
-
-.payment-form {
-    padding: 1rem;
-}
-
-#qrCodeContainer {
-    text-align: center;
-    margin: 1rem 0;
-}
-
-#qrCode {
-    max-width: 300px;
-    margin: 1rem auto;
-}
-
-.qr-instructions {
-    margin: 1rem 0;
-    color: #666;
-}

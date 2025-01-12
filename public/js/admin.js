@@ -1006,6 +1006,50 @@ class AdminPanel {
             this.loadLogs({ date: e.target.value });
         });
     }
+
+    async loadPendingPayments() {
+        try {
+            const response = await fetch('/api/admin/payments/pending', {
+                credentials: 'include'
+            });
+            const payments = await response.json();
+            
+            const tbody = document.querySelector('#pendingPaymentsTable tbody');
+            tbody.innerHTML = payments.map(payment => `
+                <tr>
+                    <td>${payment.reference}</td>
+                    <td>${payment.userId.username}</td>
+                    <td>${payment.amount} THB</td>
+                    <td>${new Date(payment.createdAt).toLocaleString()}</td>
+                    <td>
+                        <button onclick="adminPanel.verifyPayment('${payment._id}')" class="btn btn-success">
+                            Verify Payment
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading pending payments:', error);
+            this.showError('Failed to load pending payments');
+        }
+    }
+
+    async verifyPayment(paymentId) {
+        try {
+            const response = await fetch(`/api/admin/payments/${paymentId}/verify`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error('Failed to verify payment');
+
+            this.showSuccess('Payment verified successfully');
+            this.loadPendingPayments();
+        } catch (error) {
+            console.error('Error verifying payment:', error);
+            this.showError('Failed to verify payment');
+        }
+    }
 }
 
 // Initialize the admin panel

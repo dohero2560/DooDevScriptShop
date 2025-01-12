@@ -10,20 +10,21 @@ const paymentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  slipUrl: String,
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'completed', 'failed'],
     default: 'pending'
   },
+  reference: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  qrCode: String,
   createdAt: {
     type: Date,
-    default: Date.now
-  },
-  approvedAt: Date,
-  approvedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    default: Date.now,
+    expires: 3600 // Automatically delete after 1 hour if not completed
   }
 });
 
