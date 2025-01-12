@@ -13,6 +13,7 @@ const Log = require('./models/Log');
 const paymentRoutes = require('./routes/payments');
 const topupRoutes = require('./routes/topup');
 const User = require('./models/User');
+const path = require('path');
 
 const app = express();
 
@@ -43,6 +44,14 @@ app.use(passport.session());
 app.use('/api/payments', paymentRoutes);
 app.use('/api/topup', topupRoutes);
 app.use('/uploads', express.static('public/uploads'));
+
+// Serve static files from public directory
+app.use(express.static('public'));
+
+// Route for the root path
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -1905,4 +1914,9 @@ app.get('/api/admin/logs/:logId', isAdmin, async (req, res) => {
         console.error('Error fetching log details:', err);
         res.status(500).json({ error: 'Error fetching log details' });
     }
+});
+
+// Catch-all route for client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
