@@ -5,7 +5,12 @@ const QRCode = require('qrcode');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 
+// ตรวจสอบและกำหนดค่า PROMPTPAY_ID
 const PROMPTPAY_ID = process.env.PROMPTPAY_NUMBER;
+if (!PROMPTPAY_ID) {
+    console.error('Warning: PROMPTPAY_NUMBER is not set in .env file');
+}
+
 const PAYMENT_EXPIRY_MINUTES = 15; // QR Code หมดอายุใน 15 นาที
 
 // Middleware ตรวจสอบการล็อกอิน
@@ -17,12 +22,21 @@ const isAuthenticated = (req, res, next) => {
 };
 
 // Generate QR Code
-router.post('/api/payments/generate-qr', isAuthenticated, async (req, res) => {
+router.post('/api/payments/generate-qr', async (req, res) => {
     try {
+        // ตรวจสอบว่ามีการตั้งค่า PROMPTPAY_ID หรือไม่
+        if (!PROMPTPAY_ID) {
+            return res.status(500).json({ 
+                error: 'PromptPay configuration is missing' 
+            });
+        }
+
         const { amount } = req.body;
         
         if (!amount || amount < 1) {
-            return res.status(400).json({ error: 'จำนวนเงินต้องมากกว่า 1 บาท' });
+            return res.status(400).json({ 
+                error: 'จำนวนเงินต้องมากกว่า 1 บาท' 
+            });
         }
 
         // สร้างข้อมูลการเติมเงิน
@@ -34,22 +48,33 @@ router.post('/api/payments/generate-qr', isAuthenticated, async (req, res) => {
             expiresAt: new Date(Date.now() + PAYMENT_EXPIRY_MINUTES * 60000)
         });
 
-        // สร้าง QR Code
+        // Generate PromptPay payload
         const payload = generatePayload(PROMPTPAY_ID, { amount });
+        
+        // Generate QR Code
         const qrCode = await QRCode.toDataURL(payload);
         
+        // Format PromptPay ID for display (if it's a phone number)
+        let displayId = PROMPTPAY_ID;
+        if (PROMPTPAY_ID.length === 10) {
+            displayId = PROMPTPAY_ID.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+        }
+
         res.json({
             success: true,
             qrCode,
             amount,
             reference: payment.reference,
-            promptpayId: PROMPTPAY_ID.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'),
+            promptpayId: displayId,
             expiresAt: payment.expiresAt
         });
 
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'ไม่สามารถสร้าง QR Code ได้' });
+        console.error('Error generating QR code:', error);
+        res.status(500).json({ 
+            error: 'ไม่สามารถสร้าง QR Code ได้',
+            details: error.message 
+        });
     }
 });
 
