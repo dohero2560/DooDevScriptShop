@@ -71,94 +71,57 @@
         }
 
         .qr-container {
+            margin: 2rem auto;
             text-align: center;
-            margin: 2rem 0;
-            display: none;
         }
 
-        .qr-code {
-            max-width: 300px;
-            margin: 1rem auto;
+        .qr-wrapper {
+            display: inline-block;
+            padding: 1rem;
+            background: white;
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        #qrCode {
+            display: block;
+            width: 256px;
+            height: 256px;
+            margin: 0 auto;
         }
 
         .payment-info {
-            background: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 8px;
             margin-top: 2rem;
-            display: none;
-        }
-
-        .payment-info h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
         }
 
         .info-item {
             display: flex;
             justify-content: space-between;
             padding: 0.5rem 0;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #eee;
         }
 
         .info-item:last-child {
             border-bottom: none;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 1rem 0;
-        }
-
-        .loading i {
-            color: var(--primary-color);
-            font-size: 2rem;
-        }
-
         .error-message {
             color: #dc3545;
-            text-align: center;
-            margin: 1rem 0;
-            display: none;
-        }
-
-        .payment-status {
-            margin-top: 1rem;
             padding: 1rem;
+            margin: 1rem 0;
+            background: #fff;
+            border: 1px solid #dc3545;
             border-radius: 4px;
-            background: #f8f9fa;
+        }
+
+        .loading {
             text-align: center;
-        }
-
-        .status-message {
-            margin-bottom: 0.5rem;
-        }
-
-        .status-message.success {
-            color: #28a745;
-        }
-
-        .status-message.error {
-            color: #dc3545;
-        }
-
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            padding: 1rem;
+            color: #666;
         }
     </style>
 </head>
@@ -187,51 +150,44 @@
         <div class="payment-container">
             <div class="payment-header">
                 <h1>เติมเงิน</h1>
-                <p>เติมเงินเพื่อซื้อสคริปต์ที่คุณต้องการ</p>
+                <p>เติมเงินผ่าน PromptPay QR Code</p>
             </div>
 
             <div class="amount-section">
-                <input type="number" id="amount" class="amount-input" placeholder="ระบุจำนวนเงิน (บาท)" min="1">
-                <button onclick="generateQR()" class="generate-btn">
-                    <i class="fas fa-qrcode"></i> สร้าง QR Code
-                </button>
+                <input type="number" id="amount" class="amount-input" placeholder="ระบุจำนวนเงิน (บาท)" min="1" step="1">
+                <button onclick="generateQR()" class="generate-btn">สร้าง QR Code</button>
             </div>
 
-            <div id="loading" class="loading">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>กำลังสร้าง QR Code...</p>
+            <div id="error" class="error-message" style="display: none;"></div>
+            <div id="loading" class="loading" style="display: none;">กำลังสร้าง QR Code...</div>
+
+            <div id="qrContainer" class="qr-container" style="display: none;">
+                <div class="qr-wrapper">
+                    <img id="qrCode" alt="QR Code" style="max-width: 100%; height: auto;">
+                </div>
             </div>
 
-            <div id="error" class="error-message"></div>
-
-            <div id="qrContainer" class="qr-container">
-                <img id="qrCode" class="qr-code" alt="QR Code">
-                <div id="paymentInfo" class="payment-info">
-                    <h3>รายละเอียดการชำระเงิน</h3>
-                    <div class="info-item">
-                        <span>พร้อมเพย์:</span>
-                        <span id="promptpayNumber">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span>จำนวนเงินที่ต้องโอน:</span>
-                        <span id="displayAmount">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span>Points ที่จะได้รับ:</span>
-                        <span id="displayPoints">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span>เลขอ้างอิง:</span>
-                        <span id="reference">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span>หมดอายุใน:</span>
-                        <span id="countdown">-</span>
-                    </div>
-                    <div class="payment-status" id="paymentStatus">
-                        <div class="status-message">รอการชำระเงิน...</div>
-                        <div class="spinner"></div>
-                    </div>
+            <div id="paymentInfo" class="payment-info" style="display: none;">
+                <h3>รายละเอียดการชำระเงิน</h3>
+                <div class="info-item">
+                    <span>พร้อมเพย์:</span>
+                    <span id="promptpayNumber">-</span>
+                </div>
+                <div class="info-item">
+                    <span>จำนวนเงินที่ต้องโอน:</span>
+                    <span id="displayAmount">-</span>
+                </div>
+                <div class="info-item">
+                    <span>Points ที่จะได้รับ:</span>
+                    <span id="displayPoints">-</span>
+                </div>
+                <div class="info-item">
+                    <span>เลขอ้างอิง:</span>
+                    <span id="reference">-</span>
+                </div>
+                <div class="info-item">
+                    <span>หมดอายุใน:</span>
+                    <span id="countdown">-</span>
                 </div>
             </div>
         </div>
@@ -256,14 +212,20 @@
         async function generateQR() {
             const amountInput = document.getElementById('amount');
             const amount = parseFloat(amountInput.value);
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const qrContainer = document.getElementById('qrContainer');
             
             if (!amount || amount < 1) {
-                alert('กรุณาระบุจำนวนเงินที่ถูกต้อง (ขั้นต่ำ 1 บาท)');
+                error.textContent = 'กรุณาระบุจำนวนเงินที่ถูกต้อง (ขั้นต่ำ 1 บาท)';
+                error.style.display = 'block';
                 return;
             }
 
             try {
-                console.log('Sending amount:', amount);
+                loading.style.display = 'block';
+                error.style.display = 'none';
+                qrContainer.style.display = 'none';
 
                 const response = await fetch('/api/payments/generate-qr', {
                     method: 'POST',
@@ -274,28 +236,41 @@
                     body: JSON.stringify({ amount })
                 });
 
-                console.log('Response status:', response.status);
                 const data = await response.json();
-                console.log('Response data:', data);
+                console.log('QR Code data:', data);
 
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to generate QR code');
                 }
 
-                document.getElementById('qrCode').src = data.qrCode;
-                document.getElementById('qrCode').style.display = 'block';
+                if (!data.qrCode) {
+                    throw new Error('QR Code data is missing');
+                }
+
+                const qrCode = document.getElementById('qrCode');
+                qrCode.src = data.qrCode;
+                qrCode.onload = () => {
+                    qrContainer.style.display = 'block';
+                    console.log('QR Code loaded successfully');
+                };
+                qrCode.onerror = () => {
+                    console.error('Failed to load QR Code image');
+                    error.textContent = 'ไม่สามารถโหลดรูป QR Code ได้';
+                    error.style.display = 'block';
+                };
+
                 document.getElementById('promptpayNumber').textContent = data.promptpayId;
                 document.getElementById('displayAmount').textContent = `${data.amount.toFixed(2)} บาท`;
                 document.getElementById('displayPoints').textContent = `${data.points} points`;
                 document.getElementById('reference').textContent = data.reference;
                 document.getElementById('paymentInfo').style.display = 'block';
 
-                // เริ่มนับถอยหลังและตรวจสอบสถานะ
-                startCountdown(new Date(data.expiresAt));
-                startStatusCheck(data.reference);
-            } catch (error) {
-                console.error('Error:', error);
-                alert('เกิดข้อผิดพลาด: ' + error.message);
+            } catch (err) {
+                console.error('Error:', err);
+                error.textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
             }
         }
 
@@ -347,7 +322,6 @@
                         clearInterval(statusCheckInterval);
                         document.getElementById('paymentStatus').innerHTML = 
                             '<div class="status-message success">การชำระเงินสำเร็จ!</div>';
-                        // รีโหลดหน้าเพื่ออัพเดท points
                         setTimeout(() => location.reload(), 2000);
                     } else if (data.status === 'expired') {
                         clearInterval(statusCheckInterval);
@@ -357,7 +331,7 @@
                 } catch (error) {
                     console.error('Error checking status:', error);
                 }
-            }, 5000); // ตรวจสอบทุก 5 วินาที
+            }, 5000);
         }
 
         // Clear intervals when leaving page
