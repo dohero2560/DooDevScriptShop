@@ -103,6 +103,25 @@
                     <button id="submitSlipBtn" class="primary-btn">Submit Payment</button>
                 </div>
             </div>
+
+            <!-- Add new tab for history -->
+            <div class="topup-tabs">
+                <button class="tab-btn active" data-tab="payment">Payment</button>
+                <button class="tab-btn" data-tab="history">History</button>
+            </div>
+
+            <div id="paymentTab" class="tab-content active">
+                <!-- Existing payment content -->
+            </div>
+
+            <div id="historyTab" class="tab-content">
+                <div class="topup-history">
+                    <h3>Topup History</h3>
+                    <div id="topupHistoryList" class="history-list">
+                        <!-- History items will be inserted here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

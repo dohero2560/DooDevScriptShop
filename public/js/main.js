@@ -544,3 +544,66 @@ async function checkPaymentStatus(reference) {
         showNotification('Failed to check payment status: ' + error.message, 'error');
     }
 } 
+
+// Add these functions to handle tabs and history
+function initializeTopupTabs() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            button.classList.add('active');
+            const tabId = button.dataset.tab;
+            document.getElementById(`${tabId}Tab`).classList.add('active');
+
+            // Load history if history tab is selected
+            if (tabId === 'history') {
+                loadTopupHistory();
+            }
+        });
+    });
+}
+
+async function loadTopupHistory() {
+    try {
+        const response = await fetch('/api/topup/history', {
+            credentials: 'include'
+        });
+        const history = await response.json();
+
+        const historyList = document.getElementById('topupHistoryList');
+        if (history.length === 0) {
+            historyList.innerHTML = '<p class="no-data">No topup history found</p>';
+            return;
+        }
+
+        historyList.innerHTML = history.map(item => `
+            <div class="history-item">
+                <div class="history-info">
+                    <div>Amount: ฿${item.amount}</div>
+                    <div>Date: ${new Date(item.createdAt).toLocaleString()}</div>
+                </div>
+                <img src="${item.slipUrl}" 
+                     class="slip-thumbnail" 
+                     onclick="showSlipModal('${item.slipUrl}')"
+                     alt="Payment slip">
+                <span class="history-status status-${item.status.toLowerCase()}">
+                    ${item.status}
+                </span>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading topup history:', error);
+        showNotification('Failed to load topup history', 'error');
+    }
+}
+
+// Update the existing topup modal initialization
+document.addEventListener('DOMContentLoaded', function() {
+    // ... existing modal initialization code ...
+    
+    initializeTopupTabs();
+}); 

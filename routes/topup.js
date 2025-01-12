@@ -87,12 +87,13 @@ router.post('/', isAuthenticated, upload.single('slip'), async (req, res) => {
 // Get user's topup history
 router.get('/history', isAuthenticated, async (req, res) => {
     try {
-        const topups = await Topup.find({ userId: req.user._id })
-            .sort({ createdAt: -1 });
-        res.json(topups);
-    } catch (err) {
-        console.error('Error fetching topup history:', err);
-        res.status(500).json({ error: 'Error fetching topup history' });
+        const history = await Topup.find({ userId: req.user._id })
+            .sort({ createdAt: -1 })
+            .limit(20);
+        res.json(history);
+    } catch (error) {
+        console.error('Error fetching topup history:', error);
+        res.status(500).json({ error: 'Failed to fetch topup history' });
     }
 });
 
