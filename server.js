@@ -2098,3 +2098,25 @@ app.get('/api/admin/topup-stats', isAdmin, async (req, res) => {
         });
     }
 });
+
+// Add this after other route definitions but before app.listen()
+app.get('/api/topup/history', async (req, res) => {
+    try {
+        // Check if user is authenticated
+        if (!req.user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const history = await Topup.find({ userId: req.user._id })
+            .select('amount status createdAt slipUrl')
+            .sort({ createdAt: -1 })
+            .limit(20);
+
+        // Set proper content type
+        res.setHeader('Content-Type', 'application/json');
+        res.json(history);
+    } catch (error) {
+        console.error('Error fetching topup history:', error);
+        res.status(500).json({ error: 'Failed to fetch topup history' });
+    }
+});
