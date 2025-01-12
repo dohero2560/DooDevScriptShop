@@ -35,9 +35,9 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(paymentRoutes);
-app.use('/uploads', express.static('public/uploads'));
+app.use('/api/payments', paymentRoutes);
 app.use('/api/topup', topupRoutes);
+app.use('/uploads', express.static('public/uploads'));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)

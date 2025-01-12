@@ -381,15 +381,40 @@ async function updateServerIP(purchaseId) {
     }
 } 
 
+// เพิ่มฟังก์ชันสำหรับสลับวิธีการชำระเงิน
+document.querySelectorAll('.method-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // ลบ active class จากทุกปุ่ม
+        document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+        // เพิ่ม active class ให้ปุ่มที่ถูกคลิก
+        this.classList.add('active');
+        
+        // ซ่อนทุก section
+        document.querySelectorAll('.payment-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // แสดง section ที่เกี่ยวข้อง
+        const method = this.dataset.method;
+        document.getElementById(`${method}PaymentSection`).classList.add('active');
+    });
+});
+
+// QR Code Generation
 async function generatePaymentQR() {
     try {
-        const amount = document.getElementById('topupAmount').value;
+        const amount = document.getElementById('qrTopupAmount').value;
+        if (!amount || amount <= 0) {
+            showNotification('Please enter a valid amount', 'error');
+            return;
+        }
         
         const response = await fetch('/api/payments/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({ amount: Number(amount) })
         });
 
@@ -402,48 +427,61 @@ async function generatePaymentQR() {
         document.getElementById('paymentAmount').textContent = data.amount;
         document.getElementById('qrCodeContainer').style.display = 'block';
         
-        // Start payment status check
         checkPaymentStatus(data.reference);
-        
     } catch (error) {
-        console.error('Error generating payment:', error);
-        showNotification('Failed to generate payment QR', 'error');
+        console.error('Error generating QR code:', error);
+        showNotification('Failed to generate QR code', 'error');
     }
 }
 
-async function checkPaymentStatus(reference) {
-    const checkStatus = async () => {
-        try {
-            const response = await fetch(`/api/payments/${reference}`);
-            const data = await response.json();
-            
-            if (data.status === 'completed') {
-                showNotification('Payment completed successfully!', 'success');
-                document.getElementById('topupModal').style.display = 'none';
-                checkLoginStatus(); // Refresh user points display
-                return;
-            }
-            
-            if (data.status === 'failed') {
-                showNotification('Payment failed', 'error');
-                return;
-            }
-            
-            // Continue checking if still pending
-            setTimeout(checkStatus, 10000); // Check every 10 seconds
-            
-        } catch (error) {
-            console.error('Error checking payment status:', error);
+// Slip Upload
+document.getElementById('slipFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('slipPreview');
+            preview.innerHTML = `<img src="${e.target.result}" alt="Slip preview">`;
         }
-    };
+        reader.readAsDataURL(file);
+    }
+});
 
-    checkStatus();
-}
+document.getElementById('submitSlipBtn').addEventListener('click', async function() {
+    const amount = document.getElementById('slipTopupAmount').value;
+    const slipFile = document.getElementById('slipFile').files[0];
 
-// Add event listener for QR generation
+    if (!amount || !slipFile) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('amount', amount);
+    formData.append('slip', slipFile);
+
+    try {
+        const response = await fetch('/api/topup/request', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+
+        if (!response.ok) throw new Error('Failed to submit payment');
+
+        const data = await response.json();
+        showNotification('Payment slip submitted successfully', 'success');
+        document.getElementById('topupModal').style.display = 'none';
+    } catch (error) {
+        console.error('Error submitting payment:', error);
+        showNotification('Failed to submit payment', 'error');
+    }
+});
+
+// Event Listeners
 document.getElementById('generateQRBtn').addEventListener('click', generatePaymentQR); 
 
-// เพิ่ม event listener สำหรับ TOPUP link
+// Event Listeners for TOPUP link
 document.addEventListener('DOMContentLoaded', function() {
     const topupLink = document.getElementById('topupLink');
     const topupModal = document.getElementById('topupModal');
@@ -465,78 +503,5 @@ document.addEventListener('DOMContentLoaded', function() {
                 topupModal.style.display = 'none';
             }
         };
-    }
-}); 
-
-document.addEventListener('DOMContentLoaded', function() {
-    // ... existing code ...
-
-    // Slip upload preview
-    const slipUpload = document.getElementById('slipUpload');
-    const slipPreview = document.getElementById('slipPreview');
-    const submitTopupBtn = document.getElementById('submitTopupBtn');
-    const topupStatus = document.getElementById('topupStatus');
-    const topupStatusText = document.getElementById('topupStatusText');
-
-    if (slipUpload) {
-        slipUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    slipPreview.src = e.target.result;
-                    slipPreview.style.display = 'block';
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    if (submitTopupBtn) {
-        submitTopupBtn.addEventListener('click', async function() {
-            const amount = document.getElementById('topupAmount').value;
-            const slipFile = slipUpload.files[0];
-
-            if (!amount || !slipFile) {
-                alert('Please enter amount and upload slip');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('amount', amount);
-            formData.append('slip', slipFile);
-
-            try {
-                submitTopupBtn.disabled = true;
-                submitTopupBtn.textContent = 'Submitting...';
-
-                const response = await fetch('/api/topup/request', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    topupStatus.style.display = 'block';
-                    topupStatusText.textContent = 'Payment submitted and waiting for admin approval';
-                    topupStatusText.style.color = '#2196F3';
-                    
-                    // Reset form
-                    slipUpload.value = '';
-                    slipPreview.style.display = 'none';
-                    document.getElementById('topupAmount').value = '100';
-                } else {
-                    throw new Error(result.message || 'Failed to submit payment');
-                }
-            } catch (error) {
-                topupStatus.style.display = 'block';
-                topupStatusText.textContent = error.message;
-                topupStatusText.style.color = '#f44336';
-            } finally {
-                submitTopupBtn.disabled = false;
-                submitTopupBtn.textContent = 'Submit Payment';
-            }
-        });
     }
 }); 

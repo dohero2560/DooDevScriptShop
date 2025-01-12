@@ -62,23 +62,45 @@
     <div id="topupModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>TOPUP Points</h2>
+                <h2>Top Up Points</h2>
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Amount (THB)</label>
-                    <input type="number" id="topupAmount" min="1" step="1" value="100">
+                <!-- เพิ่มตัวเลือกวิธีการชำระเงิน -->
+                <div class="payment-method-selector">
+                    <button class="method-btn active" data-method="qr">QR Payment</button>
+                    <button class="method-btn" data-method="slip">Upload Slip</button>
                 </div>
-                <div class="form-group">
-                    <label>Upload Payment Slip</label>
-                    <input type="file" id="slipUpload" accept="image/*">
-                    <img id="slipPreview" style="max-width: 200px; display: none; margin-top: 10px;">
+
+                <!-- ส่วนของ QR Payment -->
+                <div id="qrPaymentSection" class="payment-section active">
+                    <div class="form-group">
+                        <label for="qrTopupAmount">Amount (THB)</label>
+                        <input type="number" id="qrTopupAmount" min="1" step="1" required>
+                    </div>
+                    <button id="generateQRBtn" class="primary-btn">Generate QR Code</button>
+                    
+                    <div id="qrCodeContainer" style="display: none; text-align: center; margin-top: 20px;">
+                        <img id="qrCodeImage" alt="QR Code" style="max-width: 200px;">
+                        <div class="payment-details">
+                            <p>Reference: <span id="paymentReference"></span></p>
+                            <p>Amount: ฿<span id="paymentAmount"></span></p>
+                        </div>
+                    </div>
                 </div>
-                <button id="submitTopupBtn" class="primary-btn">Submit Payment</button>
-                
-                <div id="topupStatus" style="display: none; margin-top: 20px;">
-                    <p>Status: <span id="topupStatusText"></span></p>
+
+                <!-- ส่วนของ Upload Slip -->
+                <div id="slipPaymentSection" class="payment-section">
+                    <div class="form-group">
+                        <label for="slipTopupAmount">Amount (THB)</label>
+                        <input type="number" id="slipTopupAmount" min="1" step="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="slipFile">Upload Payment Slip</label>
+                        <input type="file" id="slipFile" accept="image/jpeg,image/png" required>
+                        <div class="slip-preview" id="slipPreview"></div>
+                    </div>
+                    <button id="submitSlipBtn" class="primary-btn">Submit Payment</button>
                 </div>
             </div>
         </div>
