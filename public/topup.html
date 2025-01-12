@@ -61,23 +61,34 @@
 
     <script>
         async function generateQR() {
-            const amount = parseFloat(document.getElementById('amount').value);
+            const amountInput = document.getElementById('amount');
+            const amount = parseFloat(amountInput.value);
+            
             if (!amount || amount < 1) {
-                alert('กรุณาระบุจำนวนเงินที่ถูกต้อง');
+                alert('กรุณาระบุจำนวนเงินที่ถูกต้อง (ขั้นต่ำ 1 บาท)');
                 return;
             }
 
             try {
+                console.log('Sending amount:', amount); // Debug log
+
                 const response = await fetch('/api/payments/generate-qr', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({ amount })
                 });
 
+                console.log('Response status:', response.status); // Debug log
+
                 const data = await response.json();
-                if (data.error) throw new Error(data.error);
+                console.log('Response data:', data); // Debug log
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate QR code');
+                }
 
                 document.getElementById('qrCode').src = data.qrCode;
                 document.getElementById('qrCode').style.display = 'block';
@@ -85,9 +96,24 @@
                 document.getElementById('reference').textContent = data.reference;
                 document.getElementById('paymentInfo').style.display = 'block';
             } catch (error) {
+                console.error('Error:', error); // Debug log
                 alert('เกิดข้อผิดพลาด: ' + error.message);
             }
         }
+
+        // Add a test function to check if the API is accessible
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/payments/test');
+                const data = await response.json();
+                console.log('API Test Response:', data);
+            } catch (error) {
+                console.error('API Test Error:', error);
+            }
+        }
+
+        // Run test when page loads
+        testAPI();
     </script>
 </body>
 </html> 

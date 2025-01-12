@@ -17,8 +17,8 @@ const Log = require('./models/Log');
 const app = express();
 const paymentsRouter = require('./routes/payments');
 // Middleware
-app.use('/', paymentsRouter);
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(cors());
 app.use(session({
@@ -36,6 +36,9 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Apply routes AFTER middleware
+app.use('/', paymentsRouter);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)

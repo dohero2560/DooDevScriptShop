@@ -10,11 +10,23 @@ const PROMPTPAY_ID = '0812345678'; // Replace with your PromptPay number
 // Generate QR Code for payment
 router.post('/api/payments/generate-qr', async (req, res) => {
     try {
-        const { amount } = req.body;
+        console.log('Request body:', req.body); // Debug log
+
+        if (!req.body || typeof req.body.amount === 'undefined') {
+            return res.status(400).json({ 
+                error: 'Missing amount in request body',
+                received: req.body 
+            });
+        }
+
+        const amount = parseFloat(req.body.amount);
         
         // Validate amount
-        if (!amount || amount < 1) {
-            return res.status(400).json({ error: 'Invalid amount' });
+        if (isNaN(amount) || amount < 1) {
+            return res.status(400).json({ 
+                error: 'Invalid amount. Must be a number greater than or equal to 1',
+                received: amount 
+            });
         }
 
         // Generate PromptPay payload
@@ -24,43 +36,75 @@ router.post('/api/payments/generate-qr', async (req, res) => {
         const qrCode = await QRCode.toDataURL(payload);
         
         res.json({
+            success: true,
             qrCode,
             amount,
-            reference: Date.now().toString() // Simple reference number
+            reference: Date.now().toString()
         });
     } catch (error) {
-        console.error('Error generating QR code:', error);
-        res.status(500).json({ error: 'Failed to generate QR code' });
+        console.error('Error details:', error); // Debug log
+        res.status(500).json({ 
+            error: 'Failed to generate QR code',
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
 // Verify payment (webhook endpoint for bank notification)
 router.post('/api/payments/verify', async (req, res) => {
     try {
+        console.log('Payment verification request:', req.body); // Debug log
+
         const { reference, amount, userId } = req.body;
         
+        if (!reference || !amount || !userId) {
+            return res.status(400).json({ 
+                error: 'Missing required fields',
+                required: ['reference', 'amount', 'userId'],
+                received: req.body 
+            });
+        }
+
         // Add points to user account
         const user = await User.findById(userId);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ 
+                error: 'User not found',
+                userId 
+            });
         }
 
         // Convert amount to points (1 baht = 1 point)
         const points = Math.floor(amount);
+        const previousPoints = user.points;
         user.points += points;
         await user.save();
 
-        // Log the transaction
-        await logAdminAction(req, 'create', 'points', user._id, {
-            before: { points: user.points - points },
-            after: { points: user.points }
-        });
+        console.log(`Updated points for user ${userId}: ${previousPoints} -> ${user.points}`); // Debug log
 
-        res.json({ success: true, newBalance: user.points });
+        res.json({ 
+            success: true, 
+            newBalance: user.points,
+            pointsAdded: points,
+            previousBalance: previousPoints
+        });
     } catch (error) {
-        console.error('Error verifying payment:', error);
-        res.status(500).json({ error: 'Failed to verify payment' });
+        console.error('Payment verification error:', error); // Debug log
+        res.status(500).json({ 
+            error: 'Failed to verify payment',
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
+});
+
+// Add a test endpoint to check if the route is working
+router.get('/api/payments/test', (req, res) => {
+    res.json({ 
+        status: 'Payments API is working',
+        timestamp: new Date().toISOString()
+    });
 });
 
 module.exports = router; 
