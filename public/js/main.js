@@ -381,3 +381,22 @@ async function updateServerIP(purchaseId) {
         alert('Error updating server IP: ' + error.message);
     }
 } 
+
+document.getElementById('payment-form').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('/api/payments/upload-slip', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Failed to upload slip');
+        
+        alert('Slip uploaded successfully. Awaiting admin confirmation.');
+    } catch (error) {
+        console.error('Error uploading slip:', error);
+        alert('Error uploading slip');
+    }
+}); 

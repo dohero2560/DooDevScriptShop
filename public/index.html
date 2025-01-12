@@ -50,6 +50,17 @@
 
         <!-- Scripts Grid -->
         <div id="scripts-container" class="scripts-grid"></div>
+
+        <!-- Add this inside the body where appropriate -->
+        <div id="payment-section">
+            <h2>Pay with QR Code</h2>
+            <img src="/path/to/qr-code.png" alt="QR Code" id="qr-code">
+            <form id="payment-form" enctype="multipart/form-data">
+                <label for="slip-upload">Upload Payment Slip:</label>
+                <input type="file" id="slip-upload" name="slip" accept="image/*" required>
+                <button type="submit">Submit</button>
+            </form>
+        </div>
     </main>
 
     <!-- Notification Container -->

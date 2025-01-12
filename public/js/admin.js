@@ -1057,4 +1057,21 @@ document.querySelector('.entity-type-filter')?.addEventListener('change', (e) =>
 
 document.querySelector('.date-filter')?.addEventListener('change', (e) => {
     adminPanel.loadLogs({ date: e.target.value });
-}); 
+});
+
+async function confirmPayment(paymentId) {
+    try {
+        const response = await fetch(`/api/admin/payments/${paymentId}/confirm`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to confirm payment');
+
+        alert('Payment confirmed successfully');
+        // Reload or update the payment list
+    } catch (error) {
+        console.error('Error confirming payment:', error);
+        alert('Error confirming payment');
+    }
+} 

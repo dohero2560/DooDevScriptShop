@@ -10,6 +10,8 @@ const MongoStore = require('connect-mongo');
 const winston = require('winston');
 const fetch = require('node-fetch');
 const Log = require('./models/Log');
+const multer = require('multer');
+const Payment = require('./models/Payment');
 
 const app = express();
 
@@ -125,6 +127,32 @@ const purchaseSchema = new mongoose.Schema({
 });
 
 const Purchase = mongoose.model('Purchase', purchaseSchema);
+
+// Configure multer for file uploads
+const upload = multer({ dest: 'uploads/' });
+
+// Endpoint to upload payment slip
+app.post('/api/payments/upload-slip', upload.single('slip'), async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const payment = new Payment({
+        userId: req.user._id,
+        slipUrl: `/uploads/${req.file.filename}`
+    });
+
+    await payment.save();
+    res.json({ message: 'Slip uploaded successfully' });
+});
+
+// Endpoint for admin to confirm payment
+app.post('/api/admin/payments/:id/confirm', isAdmin, async (req, res) => {
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    payment.status = 'confirmed';
+    await payment.save();
+    res.json({ message: 'Payment confirmed' });
+});
 
 // Discord Authentication
 passport.use(new DiscordStrategy({
