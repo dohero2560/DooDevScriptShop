@@ -9,7 +9,7 @@ const logSchema = new mongoose.Schema({
   entityType: {
     type: String,
     required: true,
-    enum: ['user', 'script', 'purchase', 'points']
+    enum: ['user', 'script', 'purchase', 'points', 'license']
   },
   entityId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -21,19 +21,26 @@ const logSchema = new mongoose.Schema({
     required: true
   },
   changes: {
-    before: Object,
-    after: Object
+    before: mongoose.Schema.Types.Mixed,
+    after: mongoose.Schema.Types.Mixed,
+    changedFields: [String]
   },
   metadata: {
-    path: String,
-    method: String
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
-  ipAddress: String,
-  userAgent: String,
   timestamp: {
     type: Date,
     default: Date.now
-  }
+  },
+  ipAddress: String,
+  userAgent: String
 });
+
+// ดัชนีเพื่อการค้นหาที่เร็วขึ้น
+logSchema.index({ action: 1, entityType: 1 });
+logSchema.index({ timestamp: -1 });
+logSchema.index({ adminId: 1 });
+logSchema.index({ entityId: 1 });
 
 module.exports = mongoose.model('Log', logSchema); 

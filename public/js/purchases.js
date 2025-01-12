@@ -113,14 +113,6 @@ async function updateServerSettings(purchaseId) {
     }
 }
 
-function openModal() {
-    document.getElementById('slipUploadModal').style.display = 'block';
-}
-
-function closeModal() {
-    document.getElementById('slipUploadModal').style.display = 'none';
-}
-
 // Load purchases when page loads
 document.addEventListener('DOMContentLoaded', function() {
     loadPurchases();

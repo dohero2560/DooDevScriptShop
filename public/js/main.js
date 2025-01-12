@@ -381,34 +381,3 @@ async function updateServerIP(purchaseId) {
         alert('Error updating server IP: ' + error.message);
     }
 } 
-
-function updateNavigation(user) {
-    const loginBtn = document.getElementById('loginBtn');
-    const userInfo = document.getElementById('userInfo');
-    const purchasesLink = document.getElementById('purchasesLink');
-    const topupLink = document.getElementById('topupLink');
-    
-    if (user) {
-        // User is logged in
-        loginBtn.style.display = 'none';
-        userInfo.style.display = 'flex';
-        purchasesLink.style.display = 'block';
-        topupLink.style.display = 'block';
-        
-        // Update user info display
-        userInfo.innerHTML = `
-            <img src="${user.avatar}" alt="Avatar" class="avatar">
-            <span class="username">${user.username}</span>
-            <span class="points">${user.points || 0} Points</span>
-            <button onclick="logout()" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
-        `;
-    } else {
-        // User is not logged in
-        loginBtn.style.display = 'block';
-        userInfo.style.display = 'none';
-        purchasesLink.style.display = 'none';
-        topupLink.style.display = 'none';
-    }
-} 

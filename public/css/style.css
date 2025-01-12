@@ -52,55 +52,6 @@ nav {
     gap: 1.5rem;
 }
 
-.nav-link {
-    color: var(--text-color);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-}
-
-.nav-link:hover {
-    background: var(--primary-color);
-    color: white;
-}
-
-.nav-link i {
-    font-size: 1.1rem;
-}
-
-/* Specific style for topup link */
-#topupLink {
-    background: var(--primary-color);
-    color: white;
-}
-
-#topupLink:hover {
-    background: #5b6eae;
-    transform: translateY(-2px);
-}
-
-/* Update user info styles */
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-}
-
-.points {
-    background: var(--primary-color);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
-}
-
 .nav-links a {
     color: white;
     text-decoration: none;
@@ -852,28 +803,4 @@ main {
         width: 100%;
         justify-content: center;
     }
-}
-
-.slip-upload-form {
-    max-width: 400px;
-    margin: 0 auto;
-}
-
-.image-preview {
-    margin-top: 10px;
-    max-width: 300px;
-    max-height: 300px;
-}
-
-.image-preview img {
-    max-width: 100%;
-    height: auto;
-}
-
-.close {
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    font-size: 24px;
-    cursor: pointer;
 }

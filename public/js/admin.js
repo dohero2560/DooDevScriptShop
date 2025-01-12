@@ -1006,56 +1006,6 @@ class AdminPanel {
             this.loadLogs({ date: e.target.value });
         });
     }
-
-    async loadSlipPayments() {
-        try {
-            const response = await fetch('/api/admin/payments/slip');
-            const payments = await response.json();
-            
-            const container = document.querySelector('#slipPayments');
-            container.innerHTML = payments.map(payment => `
-                <div class="payment-card">
-                    <img src="${payment.imageUrl}" alt="Payment Slip">
-                    <div class="payment-details">
-                        <p>Amount: ${payment.amount} THB</p>
-                        <p>Points: ${payment.points}</p>
-                        <p>User: ${payment.userId.username}#${payment.userId.discriminator}</p>
-                        <p>Date: ${new Date(payment.createdAt).toLocaleString()}</p>
-                    </div>
-                    <div class="payment-actions">
-                        <button onclick="adminPanel.verifyPayment('${payment._id}', 'approved')">
-                            Approve
-                        </button>
-                        <button onclick="adminPanel.verifyPayment('${payment._id}', 'rejected')">
-                            Reject
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        } catch (error) {
-            console.error('Error loading slip payments:', error);
-        }
-    }
-
-    async verifyPayment(paymentId, status) {
-        try {
-            const note = status === 'rejected' ? prompt('Enter rejection reason:') : '';
-            
-            const response = await fetch(`/api/admin/payments/slip/${paymentId}/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, note })
-            });
-
-            if (!response.ok) throw new Error('Failed to verify payment');
-            
-            this.loadSlipPayments();
-            this.showSuccess(`Payment ${status} successfully`);
-        } catch (error) {
-            console.error('Error verifying payment:', error);
-            this.showError('Failed to verify payment');
-        }
-    }
 }
 
 // Initialize the admin panel
