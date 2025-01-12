@@ -1588,3 +1588,45 @@ app.use((req, res, next) => {
     });
     next();
 });
+
+// Add near other admin routes
+app.get('/api/admin/logs', isAdmin, async (req, res) => {
+    try {
+        const { action, entityType, date, page = 1, limit = 50 } = req.query;
+        const skip = (page - 1) * limit;
+        
+        // Build query conditions
+        const query = {};
+        if (action && action !== 'all') query.action = action;
+        if (entityType && entityType !== 'all') query.entityType = entityType;
+        if (date) {
+            const startDate = new Date(date);
+            const endDate = new Date(date);
+            endDate.setDate(endDate.getDate() + 1);
+            query.timestamp = { $gte: startDate, $lt: endDate };
+        }
+
+        // Fetch logs with pagination and populate admin details
+        const logs = await Log.find(query)
+            .sort({ timestamp: -1 })
+            .skip(skip)
+            .limit(Number(limit))
+            .populate('adminId', 'username discriminator');
+
+        // Get total count for pagination
+        const total = await Log.countDocuments(query);
+
+        res.json({
+            logs,
+            pagination: {
+                total,
+                pages: Math.ceil(total / limit),
+                current: page,
+                limit
+            }
+        });
+    } catch (err) {
+        console.error('Error fetching logs:', err);
+        res.status(500).json({ error: 'Error fetching activity logs' });
+    }
+});

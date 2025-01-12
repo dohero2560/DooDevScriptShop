@@ -869,8 +869,13 @@ class AdminPanel {
             const response = await fetch(`/api/admin/logs?${queryParams}`, {
                 credentials: 'include'
             });
-            const logs = await response.json();
-            this.renderLogs(logs);
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch logs');
+            }
+
+            const data = await response.json();
+            this.renderLogs(data.logs);
         } catch (err) {
             console.error('Error loading logs:', err);
             this.showError('Failed to load activity logs');
@@ -884,14 +889,13 @@ class AdminPanel {
         tbody.innerHTML = logs.map(log => `
             <tr>
                 <td>${new Date(log.timestamp).toLocaleString()}</td>
-                <td>${log.adminId.username}</td>
+                <td>${log.adminId?.username || 'Unknown'}</td>
                 <td>${this.formatAction(log.action)}</td>
                 <td>${this.formatEntityType(log.entityType)}</td>
                 <td>
                     <span class="log-details">${this.formatChanges(log.changes)}</span>
                     <i class="fas fa-info-circle log-details-btn" 
-                        onclick="adminPanel.showLogDetails(${JSON.stringify(log)})"
-                    ></i>
+                       onclick='adminPanel.showLogDetails(${JSON.stringify(log)})'></i>
                 </td>
             </tr>
         `).join('');
@@ -941,6 +945,47 @@ class AdminPanel {
         modal.querySelector('.close').onclick = () => {
             modal.remove();
         };
+    }
+
+    setupEventListeners() {
+        // Add event listener for logs section
+        document.querySelector('[data-section="logs"]')?.addEventListener('click', () => {
+            this.showSection('logs');
+            this.loadLogs();
+        });
+
+        // Add filter listeners
+        document.querySelector('.log-type-filter')?.addEventListener('change', (e) => {
+            this.loadLogs({ action: e.target.value });
+        });
+
+        document.querySelector('.entity-type-filter')?.addEventListener('change', (e) => {
+            this.loadLogs({ entityType: e.target.value });
+        });
+
+        document.querySelector('.date-filter')?.addEventListener('change', (e) => {
+            this.loadLogs({ date: e.target.value });
+        });
+    }
+
+    showSection(sectionName) {
+        // Hide all sections
+        document.querySelectorAll('.content-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Show selected section
+        const section = document.getElementById(`${sectionName}-section`);
+        if (section) {
+            section.style.display = 'block';
+            this.currentSection = sectionName;
+        }
+
+        // Update active state in sidebar
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-section="${sectionName}"]`)?.classList.add('active');
     }
 }
 
