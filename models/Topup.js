@@ -28,18 +28,10 @@ const topupSchema = new mongoose.Schema({
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'
     },
-    approvedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    approvedAt: Date,
-    rejectionReason: String,
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-const Topup = mongoose.model('Topup', topupSchema);
-
-module.exports = Topup;
+module.exports = mongoose.model('Topup', topupSchema);

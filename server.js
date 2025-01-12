@@ -2102,21 +2102,29 @@ app.get('/api/admin/topup-stats', isAdmin, async (req, res) => {
 // Add this after other route definitions but before app.listen()
 app.get('/api/topup/history', async (req, res) => {
     try {
-        // Check if user is authenticated
+        // Debug: Log user authentication status
+        console.log('User auth status:', !!req.user);
+        
         if (!req.user) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
+
+        // Debug: Log user ID
+        console.log('Fetching history for user:', req.user._id);
 
         const history = await Topup.find({ userId: req.user._id })
             .select('amount status createdAt slipUrl')
             .sort({ createdAt: -1 })
             .limit(20);
 
-        // Set proper content type
+        // Debug: Log found history
+        console.log('Found history items:', history.length);
+
+        // Ensure proper headers
         res.setHeader('Content-Type', 'application/json');
-        res.json(history);
+        return res.json(history);
     } catch (error) {
         console.error('Error fetching topup history:', error);
-        res.status(500).json({ error: 'Failed to fetch topup history' });
+        return res.status(500).json({ error: 'Failed to fetch topup history' });
     }
 });

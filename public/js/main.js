@@ -570,26 +570,46 @@ function initializeTopupTabs() {
 async function loadTopupHistory() {
     try {
         const response = await fetch('/api/topup/history', {
-            credentials: 'include'
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
         });
-        const history = await response.json();
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server did not return JSON!');
+        }
+
+        const history = await response.json();
         const historyList = document.getElementById('topupHistoryList');
+        
+        if (!Array.isArray(history)) {
+            throw new Error('Server did not return an array');
+        }
+
         if (history.length === 0) {
-            historyList.innerHTML = '<p class="no-data">No topup history found</p>';
+            historyList.innerHTML = '<p class="text-center p-4">No topup history found</p>';
             return;
         }
 
         historyList.innerHTML = history.map(item => `
             <div class="history-item">
                 <div class="history-info">
-                    <div>Amount: ฿${item.amount}</div>
-                    <div>Date: ${new Date(item.createdAt).toLocaleString()}</div>
+                    <div>Amount: ฿${item.amount.toLocaleString()}</div>
+                    <div>Date: ${new Date(item.createdAt).toLocaleString('th-TH')}</div>
                 </div>
-                <img src="${item.slipUrl}" 
-                     class="slip-thumbnail" 
-                     onclick="showSlipModal('${item.slipUrl}')"
-                     alt="Payment slip">
+                ${item.slipUrl ? `
+                    <img src="${item.slipUrl}" 
+                         class="slip-thumbnail" 
+                         onclick="showSlipModal('${item.slipUrl}')"
+                         alt="Payment slip">
+                ` : ''}
                 <span class="history-status status-${item.status.toLowerCase()}">
                     ${item.status}
                 </span>
@@ -597,7 +617,8 @@ async function loadTopupHistory() {
         `).join('');
     } catch (error) {
         console.error('Error loading topup history:', error);
-        showNotification('Failed to load topup history', 'error');
+        document.getElementById('topupHistoryList').innerHTML = 
+            `<p class="text-center p-4 text-danger">Error loading history: ${error.message}</p>`;
     }
 }
 
