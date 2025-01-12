@@ -144,13 +144,17 @@ app.post('/api/generate-promptpay-qr', async (req, res) => {
         const { amount } = req.body;
         const promptPayNumber = process.env.PROMPTPAY_NUMBER;
         
-        // สร้าง payload สำหรับ PromptPay
+        // Generate PromptPay payload
         const payload = generatePayload(promptPayNumber, { amount: parseFloat(amount) });
         
-        // สร้าง QR Code จาก payload
-        const qrCodeUrl = await QRCode.toDataURL(payload);
-        
-        res.json({ qrCodeUrl });
+        // Generate QR Code using callback
+        QRCode.toDataURL(payload, (err, qrCodeUrl) => {
+            if (err) {
+                console.error('Error generating QR code:', err);
+                return res.status(500).json({ error: 'Failed to generate QR code' });
+            }
+            res.json({ qrCodeUrl });
+        });
     } catch (err) {
         console.error('Error generating QR code:', err);
         res.status(500).json({ error: 'Failed to generate QR code' });
