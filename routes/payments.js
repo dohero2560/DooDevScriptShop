@@ -170,6 +170,14 @@ router.get('/api/payments/:reference/status', async (req, res) => {
     }
 });
 
+// Add isAdmin middleware
+const isAdmin = (req, res, next) => {
+    if (!req.user || !req.user.role === 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+};
+
 // Submit slip payment
 router.post('/api/payments/slip', upload.single('slipImage'), async (req, res) => {
     try {
