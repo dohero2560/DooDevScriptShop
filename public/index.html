@@ -19,6 +19,9 @@
                 <a href="/purchases.html" id="purchasesLink" style="display: none;">
                     <i class="fas fa-history"></i> Purchases
                 </a>
+                <a href="#" id="topupLink" style="display: none;">
+                    <i class="fas fa-coins"></i> TOPUP
+                </a>
                 <a href="#" id="cartButton" class="cart-icon">
                     <i class="fas fa-shopping-cart"></i>
                     <span id="cartCount" class="cart-count">0</span>
@@ -106,6 +109,29 @@
             // Initial cart update
             updateCartDisplay();
             checkLoginStatus();
+
+            // Add TOPUP modal functionality
+            const topupModal = document.getElementById('topupModal');
+            const topupLink = document.getElementById('topupLink');
+            const topupCloseBtn = topupModal.querySelector('.close');
+
+            topupLink.onclick = function() {
+                topupModal.style.display = 'block';
+            }
+
+            topupCloseBtn.onclick = function() {
+                topupModal.style.display = 'none';
+            }
+
+            // Update window click handler to handle both modals
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+                if (event.target == topupModal) {
+                    topupModal.style.display = 'none';
+                }
+            }
         });
     </script>
 </body>
