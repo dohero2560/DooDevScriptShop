@@ -412,11 +412,17 @@ async function generatePaymentQR() {
         const response = await fetch('/api/payments/create', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             credentials: 'include',
             body: JSON.stringify({ amount: Number(amount) })
         });
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response');
+        }
 
         if (!response.ok) throw new Error('Failed to generate payment');
 
@@ -432,7 +438,7 @@ async function generatePaymentQR() {
         checkPaymentStatus(data.reference);
     } catch (error) {
         console.error('Error generating QR code:', error);
-        showNotification('Failed to generate QR code', 'error');
+        showNotification('Failed to generate QR code: ' + error.message, 'error');
     }
 }
 
@@ -512,8 +518,16 @@ document.addEventListener('DOMContentLoaded', function() {
 async function checkPaymentStatus(reference) {
     try {
         const response = await fetch(`/api/payments/${reference}`, {
+            headers: {
+                'Accept': 'application/json'
+            },
             credentials: 'include'
         });
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response');
+        }
         
         if (!response.ok) throw new Error('Failed to check payment status');
         
@@ -522,16 +536,14 @@ async function checkPaymentStatus(reference) {
         if (data.status === 'completed') {
             showNotification('Payment completed successfully!', 'success');
             document.getElementById('topupModal').style.display = 'none';
-            // อัพเดทยอดเงินของผู้ใช้
             await checkLoginStatus();
         } else if (data.status === 'pending') {
-            // ตรวจสอบสถานะทุก 10 วินาที
             setTimeout(() => checkPaymentStatus(reference), 10000);
         } else {
             showNotification('Payment failed or expired', 'error');
         }
     } catch (error) {
         console.error('Error checking payment status:', error);
-        showNotification('Failed to check payment status', 'error');
+        showNotification('Failed to check payment status: ' + error.message, 'error');
     }
 } 
