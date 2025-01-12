@@ -10,14 +10,6 @@ const MongoStore = require('connect-mongo');
 const winston = require('winston');
 const fetch = require('node-fetch');
 const Log = require('./models/Log');
-const multer = require('multer');
-const generatePayload = require('promptpay-qr');
-const QRCode = require('qrcode');
-const TopUp = require('./models/TopUp');
-const vision = require('@google-cloud/vision');
-const client = new vision.ImageAnnotatorClient();
-const fs = require('fs');
-const path = require('path');
 
 const app = express();
 
@@ -133,153 +125,6 @@ const purchaseSchema = new mongoose.Schema({
 });
 
 const Purchase = mongoose.model('Purchase', purchaseSchema);
-
-// Configure multer for slip uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, 'uploads/slips');
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-const upload = multer({ storage });
-
-// สร้างโฟลเดอร์ถ้ายังไม่มี
-const uploadDir = path.join(__dirname, 'uploads/slips');
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// เพิ่ม route สำหรับเข้าถึงไฟล์
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Generate PromptPay QR Code
-app.post('/api/generate-promptpay-qr', async (req, res) => {
-    try {
-        const { amount } = req.body;
-        const promptPayNumber = process.env.PROMPTPAY_NUMBER;
-        
-        // Generate PromptPay payload
-        const payload = generatePayload(promptPayNumber, { amount: parseFloat(amount) });
-        
-        // Generate QR Code using callback
-        QRCode.toDataURL(payload, (err, qrCodeUrl) => {
-            if (err) {
-                console.error('Error generating QR code:', err);
-                return res.status(500).json({ error: 'Failed to generate QR code' });
-            }
-            res.json({ qrCodeUrl });
-        });
-    } catch (err) {
-        console.error('Error generating QR code:', err);
-        res.status(500).json({ error: 'Failed to generate QR code' });
-    }
-});
-
-// Handle top-up requests
-app.post('/api/topup', upload.single('slip'), async (req, res) => {
-    if (!req.user) {
-        return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    try {
-        // Create pending top-up record
-        const topup = new TopUp({
-            userId: req.user._id,
-            amount: req.body.amount,
-            slipPath: req.file.path
-        });
-
-        // Try to read slip using OCR
-        try {
-            const [result] = await client.textDetection(req.file.path);
-            const text = result.fullTextAnnotation.text;
-            
-            // Parse slip data (ตัวอย่างการแยกข้อมูล)
-            const bankMatch = text.match(/ธนาคาร(.*?)(?:\n|$)/);
-            const amountMatch = text.match(/จำนวนเงิน\s*([0-9,]+\.[0-9]{2})/);
-            const dateMatch = text.match(/วันที่\s*(\d{2}\/\d{2}\/\d{4})/);
-            
-            topup.slipData = {
-                bankName: bankMatch ? bankMatch[1].trim() : null,
-                transferAmount: amountMatch ? parseFloat(amountMatch[1].replace(',', '')) : null,
-                transferDate: dateMatch ? new Date(dateMatch[1]) : null
-            };
-        } catch (ocrError) {
-            console.error('OCR Error:', ocrError);
-            // OCR failed but we can still save the topup
-        }
-
-        await topup.save();
-
-        // Log the top-up request
-        await logAdminAction(req, 'create', 'topup', topup._id, {
-            amount: req.body.amount,
-            status: 'pending'
-        });
-
-        res.json({ 
-            success: true, 
-            message: 'Top-up request submitted successfully',
-            topupId: topup._id
-        });
-    } catch (err) {
-        console.error('Error processing top-up:', err);
-        res.status(500).json({ error: 'Failed to process top-up request' });
-    }
-});
-
-// Admin route to get all top-ups
-app.get('/api/admin/topups', isAdmin, async (req, res) => {
-    try {
-        const topups = await TopUp.find()
-            .populate('userId', 'username discriminator')
-            .populate('processedBy', 'username discriminator')
-            .sort('-createdAt');
-        res.json(topups);
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching top-ups' });
-    }
-});
-
-// Admin route to process top-up
-app.put('/api/admin/topups/:id', isAdmin, async (req, res) => {
-    try {
-        const { status, comment } = req.body;
-        const topup = await TopUp.findById(req.params.id);
-        
-        if (!topup) {
-            return res.status(404).json({ error: 'Top-up not found' });
-        }
-
-        topup.status = status;
-        topup.adminComment = comment;
-        topup.processedBy = req.user._id;
-        topup.processedAt = new Date();
-
-        // If approved, add points to user
-        if (status === 'approved') {
-            const user = await User.findById(topup.userId);
-            user.points += topup.amount;
-            await user.save();
-        }
-
-        await topup.save();
-
-        // Log the action
-        await logAdminAction(req, 'update', 'topup', topup._id, {
-            status,
-            comment
-        });
-
-        res.json({ success: true, message: 'Top-up processed successfully' });
-    } catch (err) {
-        console.error('Error processing top-up:', err);
-        res.status(500).json({ error: 'Failed to process top-up' });
-    }
-});
 
 // Discord Authentication
 passport.use(new DiscordStrategy({
@@ -1188,22 +1033,15 @@ app.post('/api/purchases/:purchaseId/server-ip', async (req, res) => {
 
 // Admin Middleware
 const isAdmin = async (req, res, next) => {
-    try {
-        // Check if user is logged in
-        if (!req.session.user) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
-
-        // Check if user is admin
-        if (!req.session.user.isAdmin) {
-            return res.status(403).json({ error: 'Forbidden' });
-        }
-
-        next();
-    } catch (error) {
-        console.error('Admin middleware error:', error);
-        res.status(500).json({ error: 'Server error' });
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
     }
+    
+    if (!req.user.isAdmin) {
+        return res.status(403).json({ error: 'Not authorized' });
+    }
+    
+    next();
 };
 
 // Check specific permission
@@ -2058,6 +1896,5 @@ app.get('/api/admin/logs/:logId', isAdmin, async (req, res) => {
     }
 });
 
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok' });
-});
+
+app.use('/api/admin', require('./routes/admin'))

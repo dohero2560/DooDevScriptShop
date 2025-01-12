@@ -382,122 +382,67 @@ async function updateServerIP(purchaseId) {
     }
 } 
 
-// Top-up Modal Functions
-const topupModal = document.getElementById('topupModal');
-const topupBtn = document.getElementById('topupBtn');
+// Add payment modal functionality
+const addPointsBtn = document.getElementById('addPointsBtn');
+const paymentModal = document.getElementById('paymentModal');
 const generateQrBtn = document.getElementById('generateQrBtn');
-const closeTopup = topupModal.querySelector('.close');
-const topupForm = document.getElementById('topupForm');
-const qrCodeContainer = document.getElementById('qrCodeContainer');
-const slipUpload = document.getElementById('slipUpload');
-const slipPreview = document.getElementById('slipPreview');
-const amountInput = document.getElementById('amount');
+const uploadSlipBtn = document.getElementById('uploadSlipBtn');
 
-// Show modal
-topupBtn.onclick = () => {
-    topupModal.style.display = 'block';
-}
-
-// Close modal
-closeTopup.onclick = () => {
-    topupModal.style.display = 'none';
-    resetForm();
-}
-
-// Generate QR Code when button is clicked
-generateQrBtn.onclick = async () => {
-    const amount = amountInput.value;
-    if (!amount || amount <= 0) {
-        showNotification('กรุณาระบุจำนวนเงินที่ถูกต้อง', 'error');
-        return;
-    }
-
-    try {
-        generateQrBtn.disabled = true;
-        generateQrBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง QR Code...';
-
-        const response = await fetch('/api/generate-promptpay-qr', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ amount })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            document.getElementById('qrCode').src = data.qrCodeUrl;
-            qrCodeContainer.style.display = 'block';
-            showNotification('สร้าง QR Code สำเร็จ', 'success');
-        } else {
-            throw new Error('Failed to generate QR code');
-        }
-    } catch (error) {
-        console.error('Error generating QR code:', error);
-        showNotification('ไม่สามารถสร้าง QR Code ได้', 'error');
-    } finally {
-        generateQrBtn.disabled = false;
-        generateQrBtn.innerHTML = '<i class="fas fa-qrcode"></i> สร้าง QR Code';
-    }
+addPointsBtn.onclick = () => {
+  paymentModal.style.display = 'block';
 };
 
-// Preview uploaded slip
-slipUpload.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            slipPreview.src = e.target.result;
-            slipPreview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-});
+generateQrBtn.onclick = async () => {
+  const amount = document.getElementById('paymentAmount').value;
+  if (!amount || amount < 1) {
+    showNotification('Please enter a valid amount', 'error');
+    return;
+  }
 
-// Reset form function
-function resetForm() {
-    topupForm.reset();
-    qrCodeContainer.style.display = 'none';
-    slipPreview.style.display = 'none';
-    document.getElementById('qrCode').src = '';
-}
+  try {
+    const response = await fetch('/api/payment/generate-qr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: parseFloat(amount) })
+    });
 
-// Handle form submission
-topupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    if (!response.ok) throw new Error('Failed to generate QR code');
     
-    if (!slipUpload.files[0]) {
-        showNotification('กรุณาอัพโหลดสลิปการโอนเงิน', 'error');
-        return;
-    }
+    const data = await response.json();
+    document.getElementById('qrCode').src = data.qrCode;
+    document.getElementById('qrCodeContainer').style.display = 'block';
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Failed to generate QR code', 'error');
+  }
+};
 
-    const formData = new FormData();
-    formData.append('amount', amountInput.value);
-    formData.append('slip', slipUpload.files[0]);
+uploadSlipBtn.onclick = async () => {
+  const amount = document.getElementById('paymentAmount').value;
+  const slipFile = document.getElementById('slipFile').files[0];
 
-    try {
-        const response = await fetch('/api/topup', {
-            method: 'POST',
-            body: formData
-        });
+  if (!slipFile) {
+    showNotification('Please select a payment slip', 'error');
+    return;
+  }
 
-        if (response.ok) {
-            showNotification('ส่งข้อมูลการชำระเงินสำเร็จ', 'success');
-            topupModal.style.display = 'none';
-            resetForm();
-        } else {
-            throw new Error('Failed to submit payment');
-        }
-    } catch (error) {
-        console.error('Error submitting payment:', error);
-        showNotification('ไม่สามารถส่งข้อมูลการชำระเงินได้', 'error');
-    }
-});
+  const formData = new FormData();
+  formData.append('slip', slipFile);
+  formData.append('amount', amount);
 
-// Close modal when clicking outside
-window.onclick = (e) => {
-    if (e.target === topupModal) {
-        topupModal.style.display = 'none';
-        resetForm();
-    }
-} 
+  try {
+    const response = await fetch('/api/payment/upload-slip', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) throw new Error('Failed to upload slip');
+    
+    const data = await response.json();
+    paymentModal.style.display = 'none';
+    showNotification('Payment slip uploaded successfully. Waiting for approval.', 'success');
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Failed to upload payment slip', 'error');
+  }
+}; 

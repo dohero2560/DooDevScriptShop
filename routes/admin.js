@@ -1,59 +1,45 @@
-// เพิ่มเวอร์ชันใหม่
-app.post('/api/admin/scripts/:id/versions', isAdmin, async (req, res) => {
+const express = require('express');
+const router = express.Router();
+const Payment = require('../models/Payment');
+const { isAdmin } = require('../middleware/auth');
+
+// Get all payments with optional status filter
+router.get('/payments', isAdmin, async (req, res) => {
     try {
-        const script = await Script.findById(req.params.id);
-        if (!script) return res.status(404).json({ error: 'Script not found' });
-
-        const newVersion = {
-            number: req.body.number,
-            changes: req.body.changes,
-            downloadUrl: req.body.downloadUrl
-        };
-
-        script.versions.push(newVersion);
-        script.currentVersion = newVersion.number;
-        await script.save();
-
-        res.status(201).json(newVersion);
-    } catch (err) {
-        console.error('Error adding version:', err);
-        res.status(500).json({ error: 'Error adding version' });
+        const query = req.query.status ? { status: req.query.status } : {};
+        const payments = await Payment.find(query)
+            .populate('userId', 'username')
+            .sort({ createdAt: -1 });
+        
+        res.json(payments);
+    } catch (error) {
+        console.error('Error fetching payments:', error);
+        res.status(500).json({ error: 'Failed to fetch payments' });
     }
 });
 
-// อัพเดทเวอร์ชัน
-app.put('/api/admin/scripts/:scriptId/versions/:versionId', isAdmin, async (req, res) => {
+// Reject payment
+router.post('/payment/reject/:paymentId', isAdmin, async (req, res) => {
     try {
-        const script = await Script.findById(req.params.scriptId);
-        if (!script) return res.status(404).json({ error: 'Script not found' });
+        const payment = await Payment.findById(req.params.paymentId);
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' });
+        }
 
-        const version = script.versions.id(req.params.versionId);
-        if (!version) return res.status(404).json({ error: 'Version not found' });
+        if (payment.status !== 'pending') {
+            return res.status(400).json({ error: 'Payment already processed' });
+        }
 
-        version.changes = req.body.changes;
-        version.downloadUrl = req.body.downloadUrl;
-        version.isActive = req.body.isActive;
+        payment.status = 'rejected';
+        payment.approvedAt = new Date();
+        payment.approvedBy = req.user._id;
+        await payment.save();
 
-        await script.save();
-        res.json(version);
-    } catch (err) {
-        console.error('Error updating version:', err);
-        res.status(500).json({ error: 'Error updating version' });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error rejecting payment:', error);
+        res.status(500).json({ error: 'Failed to reject payment' });
     }
 });
 
-// ลบเวอร์ชัน
-app.delete('/api/admin/scripts/:scriptId/versions/:versionId', isAdmin, async (req, res) => {
-    try {
-        const script = await Script.findById(req.params.scriptId);
-        if (!script) return res.status(404).json({ error: 'Script not found' });
-
-        script.versions = script.versions.filter(v => v._id.toString() !== req.params.versionId);
-        await script.save();
-
-        res.json({ message: 'Version deleted successfully' });
-    } catch (err) {
-        console.error('Error deleting version:', err);
-        res.status(500).json({ error: 'Error deleting version' });
-    }
-}); 
+module.exports = router; 

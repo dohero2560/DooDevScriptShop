@@ -790,49 +790,112 @@ pre {
     word-wrap: break-word;
 } 
 
-.topups-list {
-    display: grid;
-    gap: 20px;
-    padding: 20px;
+/* Payment Management Styles */
+.payments-list {
+    margin: 20px 0;
+    overflow-x: auto;
 }
 
-.topup-item {
-    border: 1px solid #ddd;
-    padding: 15px;
-    border-radius: 8px;
+#paymentsTable {
+    width: 100%;
+    border-collapse: collapse;
     background: white;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.topup-item.pending {
-    border-left: 4px solid #ffd700;
+#paymentsTable th,
+#paymentsTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
 }
 
-.topup-item.approved {
-    border-left: 4px solid #4CAF50;
+#paymentsTable th {
+    background: #f5f5f5;
+    font-weight: bold;
 }
 
-.topup-item.rejected {
-    border-left: 4px solid #f44336;
+.payment-filters {
+    margin: 20px 0;
 }
 
-.slip-image img {
-    max-width: 200px;
+.payment-filters select {
+    padding: 8px;
     border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #ddd;
 }
 
-.topup-actions {
+.payment-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 4px;
+}
+
+.approve-btn {
+    background: #28a745;
+    color: white;
+}
+
+.reject-btn {
+    background: #dc3545;
+    color: white;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    margin: 10% auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 8px;
+}
+
+#slipImage {
+    max-width: 100%;
+    margin: 20px 0;
+}
+
+.payment-info {
+    margin: 20px 0;
+}
+
+.payment-actions {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
-}
-
-.slip-data {
-    margin-top: 10px;
-    padding: 10px;
-    background: #f5f5f5;
-    border-radius: 4px;
+    justify-content: flex-end;
 } 
