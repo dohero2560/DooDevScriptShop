@@ -51,6 +51,8 @@ class AdminPanel {
             // โหลดข้อมูลเมื่อเปลี่ยนแท็บ
             if (section === 'purchases') {
                 this.loadPurchases();
+            } else if (section === 'logs') {
+                this.loadLogs();
             }
         }
         this.currentSection = section;
