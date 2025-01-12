@@ -4,103 +4,254 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เติมเงิน - FiveM Store</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
     <style>
         .payment-container {
-            max-width: 600px;
-            margin: 2rem auto;
+            max-width: 800px;
+            margin: 80px auto 2rem;
             padding: 2rem;
             background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .payment-header h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .payment-header p {
+            color: #666;
+        }
+
+        .amount-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .amount-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .amount-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .generate-btn:hover {
+            background: #5b6eae;
         }
 
         .qr-container {
             text-align: center;
             margin: 2rem 0;
+            display: none;
         }
 
         .qr-code {
             max-width: 300px;
             margin: 1rem auto;
-        }
-
-        .amount-input {
-            width: 100%;
-            padding: 0.5rem;
-            margin: 1rem 0;
-            font-size: 1.2rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
         }
 
         .payment-info {
-            margin: 1rem 0;
-            padding: 1rem;
             background: #f8f9fa;
-            border-radius: 4px;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .payment-info h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .loading i {
+            color: var(--primary-color);
+            font-size: 2rem;
+        }
+
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin: 1rem 0;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="payment-container">
-        <h1>เติมเงิน</h1>
-        
-        <div class="amount-section">
-            <label for="amount">จำนวนเงิน (บาท)</label>
-            <input type="number" id="amount" class="amount-input" min="1" step="0.01">
-            <button onclick="generateQR()" class="btn btn-primary">สร้าง QR Code</button>
-        </div>
+    <header>
+        <nav>
+            <div class="logo">FiveM Store</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/purchases.html" id="purchasesLink" style="display: none;">
+                    <i class="fas fa-history"></i> Purchases
+                </a>
+                <a href="#" id="cartButton" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span id="cartCount" class="cart-count">0</span>
+                </a>
+                <div id="userInfo" style="display: none;"></div>
+                <button id="loginBtn">
+                    <i class="fab fa-discord"></i> Login with Discord
+                </button>
+            </div>
+        </nav>
+    </header>
 
-        <div class="qr-container">
-            <img id="qrCode" class="qr-code" style="display: none;">
-            <div class="payment-info" id="paymentInfo" style="display: none;">
-                <p>จำนวนเงิน: <span id="displayAmount">0</span> บาท</p>
-                <p>เลขอ้างอิง: <span id="reference"></span></p>
+    <main>
+        <div class="payment-container">
+            <div class="payment-header">
+                <h1>เติมเงิน</h1>
+                <p>เติมเงินเพื่อซื้อสคริปต์ที่คุณต้องการ</p>
+            </div>
+
+            <div class="amount-section">
+                <input type="number" id="amount" class="amount-input" placeholder="ระบุจำนวนเงิน (บาท)" min="1">
+                <button onclick="generateQR()" class="generate-btn">
+                    <i class="fas fa-qrcode"></i> สร้าง QR Code
+                </button>
+            </div>
+
+            <div id="loading" class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>กำลังสร้าง QR Code...</p>
+            </div>
+
+            <div id="error" class="error-message"></div>
+
+            <div id="qrContainer" class="qr-container">
+                <img id="qrCode" class="qr-code" alt="QR Code">
+                <div id="paymentInfo" class="payment-info">
+                    <h3>รายละเอียดการชำระเงิน</h3>
+                    <div class="info-item">
+                        <span>จำนวนเงิน:</span>
+                        <span id="displayAmount">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>เลขอ้างอิง:</span>
+                        <span id="reference">-</span>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
+        <!-- Cart Modal -->
+        <div id="cartModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Shopping Cart</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div id="cartItems"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/main.js"></script>
     <script>
         async function generateQR() {
-            const amountInput = document.getElementById('amount');
-            const amount = parseFloat(amountInput.value);
-            
-            if (!amount || amount < 1) {
-                alert('กรุณาระบุจำนวนเงินที่ถูกต้อง (ขั้นต่ำ 1 บาท)');
+            const amount = parseFloat(document.getElementById('amount').value);
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const qrContainer = document.getElementById('qrContainer');
+
+            if (!amount || amount <= 0) {
+                error.textContent = 'กรุณาระบุจำนวนเงินที่ถูกต้อง';
+                error.style.display = 'block';
                 return;
             }
 
             try {
-                console.log('Sending amount:', amount); // Debug log
+                loading.style.display = 'block';
+                error.style.display = 'none';
+                qrContainer.style.display = 'none';
 
                 const response = await fetch('/api/payments/generate-qr', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ amount })
                 });
 
-                console.log('Response status:', response.status); // Debug log
-
-                const data = await response.json();
-                console.log('Response data:', data); // Debug log
-
                 if (!response.ok) {
-                    throw new Error(data.error || 'Failed to generate QR code');
+                    throw new Error('ไม่สามารถสร้าง QR Code ได้');
                 }
 
+                const data = await response.json();
+                
                 document.getElementById('qrCode').src = data.qrCode;
-                document.getElementById('qrCode').style.display = 'block';
-                document.getElementById('displayAmount').textContent = amount.toFixed(2);
+                document.getElementById('displayAmount').textContent = `${amount.toFixed(2)} บาท`;
                 document.getElementById('reference').textContent = data.reference;
+                
+                qrContainer.style.display = 'block';
                 document.getElementById('paymentInfo').style.display = 'block';
-            } catch (error) {
-                console.error('Error:', error); // Debug log
-                alert('เกิดข้อผิดพลาด: ' + error.message);
+            } catch (err) {
+                error.textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
             }
         }
 
+        // Check login status when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+        });
+    </script>
+</body>
+</html> 
         // Add a test function to check if the API is accessible
         async function testAPI() {
             try {
