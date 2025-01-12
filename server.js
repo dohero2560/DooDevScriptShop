@@ -11,6 +11,8 @@ const winston = require('winston');
 const fetch = require('node-fetch');
 const Log = require('./models/Log');
 const paymentRoutes = require('./routes/payments');
+const topupRoutes = require('./routes/topup');
+const User = require('./models/User');
 
 const app = express();
 
@@ -34,34 +36,36 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(paymentRoutes);
+app.use('/uploads', express.static('public/uploads'));
+app.use('/api/topup', topupRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
 
-// User Schema
-const userSchema = new mongoose.Schema({
-    discordId: String,
-    username: String,
-    discriminator: String,
-    email: String,
-    avatar: String,
-    points: { type: Number, default: 0 },
-    cart: [{
-        scriptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Script' },
-        quantity: Number
-    }],
-    purchases: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' }],
-    isAdmin: { type: Boolean, default: false },
-    role: { type: String, enum: ['user', 'admin', 'superadmin'], default: 'user' },
-    permissions: [{
-        type: String,
-        enum: ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points']
-    }]
-});
+// // User Schema
+// const userSchema = new mongoose.Schema({
+//     discordId: String,
+//     username: String,
+//     discriminator: String,
+//     email: String,
+//     avatar: String,
+//     points: { type: Number, default: 0 },
+//     cart: [{
+//         scriptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Script' },
+//         quantity: Number
+//     }],
+//     purchases: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' }],
+//     isAdmin: { type: Boolean, default: false },
+//     role: { type: String, enum: ['user', 'admin', 'superadmin'], default: 'user' },
+//     permissions: [{
+//         type: String,
+//         enum: ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points']
+//     }]
+// });
 
-const User = mongoose.model('User', userSchema);
+// const User = mongoose.model('User', userSchema);
 
 // Script Schema
 const scriptSchema = new mongoose.Schema({
