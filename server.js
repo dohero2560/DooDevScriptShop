@@ -1041,35 +1041,33 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
         // กำหนดค่า isAdmin ตาม role โดยตรง
         const isAdmin = role === 'admin' || role === 'superadmin';
         
-        // สร้าง update object
-        const updateData = {
-            $set: {
-                role,
-                permissions,
-                points: Number(points),
-                isAdmin
-            }
-        };
+        // ตรวจสอบและปรับปรุงสิทธิ์ตาม role
+        let finalPermissions = [];
+        if (role === 'user') {
+            finalPermissions = []; // ล้างสิทธิ์ทั้งหมดสำหรับ user ปกติ
+        } else if (role === 'admin' || role === 'superadmin') {
+            const basicPermissions = ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points'];
+            finalPermissions = Array.from(new Set([...permissions || [], ...basicPermissions]));
+        }
 
+        // อัพเดทข้อมูล
         const updatedUser = await User.findByIdAndUpdate(
             req.params.userId,
-            updateData,
+            {
+                role,
+                permissions: finalPermissions,
+                points: Number(points) || 0,
+                isAdmin
+            },
             { 
                 new: true,
                 runValidators: true 
             }
         );
 
-        // ตรวจสอบและปรับปรุงสิทธิ์ตาม role
-        if (role === 'user') {
-            updatedUser.permissions = [];
-        } else if (role === 'admin' || role === 'superadmin') {
-            const basicPermissions = ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points'];
-            const newPermissions = new Set([...permissions, ...basicPermissions]);
-            updatedUser.permissions = Array.from(newPermissions);
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'Failed to update user' });
         }
-
-        await updatedUser.save();
 
         // สร้าง object เก็บการเปลี่ยนแปลง
         const changes = {
@@ -1084,11 +1082,13 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
                 permissions: updatedUser.permissions,
                 points: updatedUser.points,
                 isAdmin: updatedUser.isAdmin
-            },
-            changedFields: Object.keys(changes.after).filter(key => 
-                JSON.stringify(changes.before[key]) !== JSON.stringify(changes.after[key])
-            )
+            }
         };
+
+        // เพิ่มฟิลด์ changedFields
+        changes.changedFields = Object.keys(changes.after).filter(key => 
+            JSON.stringify(changes.before[key]) !== JSON.stringify(changes.after[key])
+        );
 
         // บันทึก log การเปลี่ยนแปลง
         await logAdminAction(
@@ -1112,7 +1112,10 @@ app.put('/api/admin/users/:userId', isAdmin, hasPermission('manage_users'), asyn
         });
     } catch (err) {
         console.error('Error updating user:', err);
-        res.status(500).json({ error: 'Error updating user' });
+        res.status(500).json({ 
+            error: 'Error updating user',
+            details: err.message 
+        });
     }
 });
 
