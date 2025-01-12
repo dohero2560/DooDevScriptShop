@@ -31,6 +31,10 @@
                     <i class="fas fa-history"></i>
                     <span>Activity Logs</span>
                 </a>
+                <div class="sidebar-item" onclick="adminPanel.showSection('payments')">
+                    <i class="fas fa-money-bill"></i>
+                    <span>Payments</span>
+                </div>
             </nav>
         </div>
 
@@ -163,21 +167,25 @@
                 </div>
             </div>
 
-            <!-- Add this inside the admin panel where appropriate -->
-            <div id="payments-section">
-                <h2>Pending Payments</h2>
-                <table id="payments-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Slip</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Populate with pending payments -->
-                    </tbody>
-                </table>
+            <!-- Add this to your main content area -->
+            <div id="payments-section" class="content-section" style="display: none;">
+                <h2>Payment Management</h2>
+                <div class="table-container">
+                    <table id="paymentsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User</th>
+                                <th>Amount</th>
+                                <th>Points</th>
+                                <th>Slip</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
 
     <!-- Add Script Modal -->

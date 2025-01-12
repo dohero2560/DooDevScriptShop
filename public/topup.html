@@ -2,63 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เติมเงิน - FiveM Store</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Top Up Points - FiveM Store</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="logo">FiveM Store</div>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/purchases.html" id="purchasesLink">
-                    <i class="fas fa-history"></i> Purchases
-                </a>
-                <div id="userInfo"></div>
-                <button id="loginBtn">
-                    <i class="fab fa-discord"></i> Login with Discord
-                </button>
-            </div>
-        </nav>
-    </header>
-
-    <main>
-        <div class="topup-container">
-            <h2>เติมเงิน</h2>
-            <div class="points-info">
-                <h3>Points ปัจจุบัน: <span id="currentPoints">0</span></h3>
+    <div class="topup-container">
+        <h2>Top Up Points</h2>
+        <div class="qr-section">
+            <img src="/img/promptpay-qr.png" alt="PromptPay QR">
+            <p>Scan QR code to pay via PromptPay</p>
+        </div>
+        
+        <form id="topupForm" class="topup-form">
+            <div class="form-group">
+                <label>Amount (THB)</label>
+                <input type="number" name="amount" required min="1">
             </div>
             
-            <div class="payment-options">
-                <div class="qr-section">
-                    <h3>QR PromptPay</h3>
-                    <img id="promptpayQR" src="/img/promptpay-qr.png" alt="PromptPay QR">
-                    <p>สแกน QR Code เพื่อชำระเงิน</p>
-                    <p>1 บาท = 1 Point</p>
-                </div>
-
-                <div class="upload-section">
-                    <h3>อัพโหลดสลิป</h3>
-                    <form id="payment-form" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label for="amount">จำนวนเงิน (บาท)</label>
-                            <input type="number" id="amount" name="amount" required min="1">
-                        </div>
-                        <div class="form-group">
-                            <label for="slip">อัพโหลดสลิป</label>
-                            <input type="file" id="slip" name="slip" accept="image/*" required>
-                        </div>
-                        <button type="submit" class="submit-btn">ยืนยันการเติมเงิน</button>
-                    </form>
-                </div>
+            <div class="form-group">
+                <label>Upload Payment Slip</label>
+                <input type="file" name="slip" required accept="image/*">
             </div>
-        </div>
-    </main>
+            
+            <button type="submit" class="btn btn-primary">Submit Payment</button>
+        </form>
+    </div>
 
-    <script src="/js/main.js"></script>
     <script src="/js/topup.js"></script>
 </body>
 </html> 
