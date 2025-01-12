@@ -402,7 +402,10 @@ generateQrBtn.onclick = async () => {
   try {
     const response = await fetch('/api/payment/generate-qr', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        credentials: 'include'
+      },
       body: JSON.stringify({ amount: parseFloat(amount) })
     });
 
