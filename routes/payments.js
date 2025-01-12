@@ -5,7 +5,7 @@ const QRCode = require('qrcode');
 const User = require('../models/User');
 
 // PromptPay number for receiving payments
-const PROMPTPAY_ID = '0812345678'; // Replace with your PromptPay number
+const PROMPTPAY_ID = '0648835624'; // Replace with your PromptPay number
 
 // Generate QR Code for payment
 router.post('/api/payments/generate-qr', async (req, res) => {
