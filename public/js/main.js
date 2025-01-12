@@ -422,11 +422,13 @@ async function generatePaymentQR() {
 
         const data = await response.json();
         
+        // แสดง QR Code และข้อมูลการชำระเงิน
         document.getElementById('qrCodeImage').src = data.qrCode;
         document.getElementById('paymentReference').textContent = data.reference;
         document.getElementById('paymentAmount').textContent = data.amount;
         document.getElementById('qrCodeContainer').style.display = 'block';
         
+        // เริ่มตรวจสอบสถานะการชำระเงิน
         checkPaymentStatus(data.reference);
     } catch (error) {
         console.error('Error generating QR code:', error);
@@ -505,3 +507,31 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 }); 
+
+// เพิ่มฟังก์ชัน checkPaymentStatus
+async function checkPaymentStatus(reference) {
+    try {
+        const response = await fetch(`/api/payments/${reference}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Failed to check payment status');
+        
+        const data = await response.json();
+        
+        if (data.status === 'completed') {
+            showNotification('Payment completed successfully!', 'success');
+            document.getElementById('topupModal').style.display = 'none';
+            // อัพเดทยอดเงินของผู้ใช้
+            await checkLoginStatus();
+        } else if (data.status === 'pending') {
+            // ตรวจสอบสถานะทุก 10 วินาที
+            setTimeout(() => checkPaymentStatus(reference), 10000);
+        } else {
+            showNotification('Payment failed or expired', 'error');
+        }
+    } catch (error) {
+        console.error('Error checking payment status:', error);
+        showNotification('Failed to check payment status', 'error');
+    }
+} 
