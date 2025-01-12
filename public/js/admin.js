@@ -1055,9 +1055,14 @@ class AdminPanel {
     async loadTopupRequests() {
         try {
             const response = await fetch('/api/admin/topup-requests', {
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to fetch topup requests');
             }
@@ -1085,7 +1090,7 @@ class AdminPanel {
         }
 
         container.innerHTML = requests.map(request => `
-            <div class="topup-request-item">
+            <div class="topup-request-card">
                 <div class="request-header">
                     <h3>${request.userId?.username || 'Unknown User'}</h3>
                     <span class="status-badge status-${request.status.toLowerCase()}">
@@ -1093,7 +1098,7 @@ class AdminPanel {
                     </span>
                 </div>
                 <div class="request-details">
-                    <p>Amount: ${request.amount}</p>
+                    <p>Amount: ฿${request.amount}</p>
                     <p>Date: ${new Date(request.createdAt).toLocaleString()}</p>
                     ${request.slipUrl ? `
                         <img src="${request.slipUrl}" alt="Payment Slip" class="slip-preview" 

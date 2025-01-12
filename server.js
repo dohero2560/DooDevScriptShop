@@ -1982,12 +1982,13 @@ app.use((err, req, res, next) => {
 // Admin Topup Management Routes
 app.get('/api/admin/topup-requests', isAdmin, async (req, res) => {
     try {
-        // Set proper headers
+        // Set content type explicitly
         res.setHeader('Content-Type', 'application/json');
 
+        const Topup = require('./models/Topup'); // Make sure to import Topup model
+        
         const requests = await Topup.find()
-            .populate('userId', 'username discriminator email')
-            .populate('approvedBy', 'username discriminator')
+            .populate('userId', 'username discriminator')
             .sort({ createdAt: -1 })
             .lean();
 
@@ -1995,6 +1996,7 @@ app.get('/api/admin/topup-requests', isAdmin, async (req, res) => {
             success: true,
             requests: requests
         });
+
     } catch (err) {
         console.error('Error fetching topup requests:', err);
         res.status(500).json({

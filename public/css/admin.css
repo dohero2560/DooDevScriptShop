@@ -875,3 +875,65 @@ pre {
 .reject-btn {
     background: var(--danger-color);
 } 
+
+/* Topup Request Card Styles */
+.topup-request-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.request-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.request-details {
+    margin-bottom: 1rem;
+}
+
+.slip-preview {
+    max-width: 200px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.slip-preview:hover {
+    transform: scale(1.05);
+}
+
+.request-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.approve-btn, .reject-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.approve-btn {
+    background: var(--success-color);
+    color: white;
+}
+
+.reject-btn {
+    background: var(--danger-color);
+    color: white;
+}
+
+.no-data {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+} 
