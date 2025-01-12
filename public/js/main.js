@@ -385,11 +385,13 @@ async function updateServerIP(purchaseId) {
 // Top-up Modal Functions
 const topupModal = document.getElementById('topupModal');
 const topupBtn = document.getElementById('topupBtn');
+const generateQrBtn = document.getElementById('generateQrBtn');
 const closeTopup = topupModal.querySelector('.close');
 const topupForm = document.getElementById('topupForm');
 const qrCodeContainer = document.getElementById('qrCodeContainer');
 const slipUpload = document.getElementById('slipUpload');
 const slipPreview = document.getElementById('slipPreview');
+const amountInput = document.getElementById('amount');
 
 // Show modal
 topupBtn.onclick = () => {
@@ -399,32 +401,45 @@ topupBtn.onclick = () => {
 // Close modal
 closeTopup.onclick = () => {
     topupModal.style.display = 'none';
+    resetForm();
 }
 
-// Generate QR Code when amount is entered
-document.getElementById('amount').addEventListener('change', async (e) => {
-    const amount = e.target.value;
-    if (amount > 0) {
-        try {
-            const response = await fetch('/api/generate-promptpay-qr', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ amount })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                document.getElementById('qrCode').src = data.qrCodeUrl;
-                qrCodeContainer.style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error generating QR code:', error);
-            showNotification('Failed to generate QR code', 'error');
-        }
+// Generate QR Code when button is clicked
+generateQrBtn.onclick = async () => {
+    const amount = amountInput.value;
+    if (!amount || amount <= 0) {
+        showNotification('กรุณาระบุจำนวนเงินที่ถูกต้อง', 'error');
+        return;
     }
-});
+
+    try {
+        generateQrBtn.disabled = true;
+        generateQrBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง QR Code...';
+
+        const response = await fetch('/api/generate-promptpay-qr', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('qrCode').src = data.qrCodeUrl;
+            qrCodeContainer.style.display = 'block';
+            showNotification('สร้าง QR Code สำเร็จ', 'success');
+        } else {
+            throw new Error('Failed to generate QR code');
+        }
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        showNotification('ไม่สามารถสร้าง QR Code ได้', 'error');
+    } finally {
+        generateQrBtn.disabled = false;
+        generateQrBtn.innerHTML = '<i class="fas fa-qrcode"></i> สร้าง QR Code';
+    }
+};
 
 // Preview uploaded slip
 slipUpload.addEventListener('change', (e) => {
@@ -439,12 +454,25 @@ slipUpload.addEventListener('change', (e) => {
     }
 });
 
+// Reset form function
+function resetForm() {
+    topupForm.reset();
+    qrCodeContainer.style.display = 'none';
+    slipPreview.style.display = 'none';
+    document.getElementById('qrCode').src = '';
+}
+
 // Handle form submission
 topupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    if (!slipUpload.files[0]) {
+        showNotification('กรุณาอัพโหลดสลิปการโอนเงิน', 'error');
+        return;
+    }
+
     const formData = new FormData();
-    formData.append('amount', document.getElementById('amount').value);
+    formData.append('amount', amountInput.value);
     formData.append('slip', slipUpload.files[0]);
 
     try {
@@ -454,16 +482,22 @@ topupForm.addEventListener('submit', async (e) => {
         });
 
         if (response.ok) {
-            showNotification('Payment submitted successfully', 'success');
+            showNotification('ส่งข้อมูลการชำระเงินสำเร็จ', 'success');
             topupModal.style.display = 'none';
-            topupForm.reset();
-            slipPreview.style.display = 'none';
-            qrCodeContainer.style.display = 'none';
+            resetForm();
         } else {
             throw new Error('Failed to submit payment');
         }
     } catch (error) {
         console.error('Error submitting payment:', error);
-        showNotification('Failed to submit payment', 'error');
+        showNotification('ไม่สามารถส่งข้อมูลการชำระเงินได้', 'error');
     }
-}); 
+});
+
+// Close modal when clicking outside
+window.onclick = (e) => {
+    if (e.target === topupModal) {
+        topupModal.style.display = 'none';
+        resetForm();
+    }
+} 
