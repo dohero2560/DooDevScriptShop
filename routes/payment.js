@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Payment = require('../models/Payment');
-const User = require('../models/User');
 const { generatePayload } = require('promptpay-qr');
 const qrcode = require('qrcode');
 const multer = require('multer');
@@ -18,7 +17,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Generate QR Code
+// Generate QR Code - endpoint: /payment/generate-qr
 router.post('/generate-qr', authenticateUser, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -36,7 +35,7 @@ router.post('/generate-qr', authenticateUser, async (req, res) => {
   }
 });
 
-// Upload slip and create payment record
+// Upload slip - endpoint: /payment/upload-slip
 router.post('/upload-slip', authenticateUser, upload.single('slip'), async (req, res) => {
   try {
     const { amount } = req.body;
@@ -53,36 +52,6 @@ router.post('/upload-slip', authenticateUser, upload.single('slip'), async (req,
   } catch (error) {
     console.error('Error uploading slip:', error);
     res.status(500).json({ error: 'Failed to upload slip' });
-  }
-});
-
-// Admin approve payment
-router.post('/approve/:paymentId', isAdmin, async (req, res) => {
-  try {
-    const payment = await Payment.findById(req.params.paymentId);
-    if (!payment) {
-      return res.status(404).json({ error: 'Payment not found' });
-    }
-
-    if (payment.status !== 'pending') {
-      return res.status(400).json({ error: 'Payment already processed' });
-    }
-
-    // Update payment status
-    payment.status = 'approved';
-    payment.approvedAt = new Date();
-    payment.approvedBy = req.user._id;
-    await payment.save();
-
-    // Add points to user
-    const user = await User.findById(payment.userId);
-    user.points += payment.amount;
-    await user.save();
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error approving payment:', error);
-    res.status(500).json({ error: 'Failed to approve payment' });
   }
 });
 

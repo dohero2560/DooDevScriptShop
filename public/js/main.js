@@ -388,64 +388,92 @@ const paymentModal = document.getElementById('paymentModal');
 const generateQrBtn = document.getElementById('generateQrBtn');
 const uploadSlipBtn = document.getElementById('uploadSlipBtn');
 
-addPointsBtn.onclick = () => {
-  paymentModal.style.display = 'block';
-};
+document.addEventListener('DOMContentLoaded', () => {
+    const addPointsBtn = document.getElementById('addPointsBtn');
+    const paymentModal = document.getElementById('paymentModal');
+    const generateQrBtn = document.getElementById('generateQrBtn');
+    const uploadSlipBtn = document.getElementById('uploadSlipBtn');
+    const closeBtn = document.querySelector('.close');
 
-generateQrBtn.onclick = async () => {
-  const amount = document.getElementById('paymentAmount').value;
-  if (!amount || amount < 1) {
-    showNotification('Please enter a valid amount', 'error');
-    return;
-  }
+    if (!addPointsBtn || !paymentModal || !generateQrBtn || !uploadSlipBtn || !closeBtn) {
+        console.error('Required elements not found');
+        return;
+    }
 
-  try {
-    const response = await fetch('/api/payment/generate-qr', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        credentials: 'include'
-      },
-      body: JSON.stringify({ amount: parseFloat(amount) })
-    });
+    addPointsBtn.onclick = () => {
+        paymentModal.style.display = 'block';
+    };
 
-    if (!response.ok) throw new Error('Failed to generate QR code');
-    
-    const data = await response.json();
-    document.getElementById('qrCode').src = data.qrCode;
-    document.getElementById('qrCodeContainer').style.display = 'block';
-  } catch (error) {
-    console.error('Error:', error);
-    showNotification('Failed to generate QR code', 'error');
-  }
-};
+    generateQrBtn.onclick = async () => {
+        const amount = document.getElementById('paymentAmount').value;
+        if (!amount || amount < 1) {
+            alert('Please enter a valid amount');
+            return;
+        }
 
-uploadSlipBtn.onclick = async () => {
-  const amount = document.getElementById('paymentAmount').value;
-  const slipFile = document.getElementById('slipFile').files[0];
+        try {
+            // แก้ไข endpoint ให้ตรงกับ server
+            const response = await fetch('/payment/generate-qr', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ amount: parseFloat(amount) })
+            });
 
-  if (!slipFile) {
-    showNotification('Please select a payment slip', 'error');
-    return;
-  }
+            if (!response.ok) throw new Error('Failed to generate QR code');
+            
+            const data = await response.json();
+            const qrCode = document.getElementById('qrCode');
+            const qrContainer = document.getElementById('qrCodeContainer');
+            
+            qrCode.src = data.qrCode;
+            qrContainer.style.display = 'block';
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to generate QR code');
+        }
+    };
 
-  const formData = new FormData();
-  formData.append('slip', slipFile);
-  formData.append('amount', amount);
+    uploadSlipBtn.onclick = async () => {
+        const amount = document.getElementById('paymentAmount').value;
+        const slipFile = document.getElementById('slipFile').files[0];
 
-  try {
-    const response = await fetch('/api/payment/upload-slip', {
-      method: 'POST',
-      body: formData
-    });
+        if (!slipFile) {
+            alert('Please select a payment slip');
+            return;
+        }
 
-    if (!response.ok) throw new Error('Failed to upload slip');
-    
-    const data = await response.json();
-    paymentModal.style.display = 'none';
-    showNotification('Payment slip uploaded successfully. Waiting for approval.', 'success');
-  } catch (error) {
-    console.error('Error:', error);
-    showNotification('Failed to upload payment slip', 'error');
-  }
-}; 
+        const formData = new FormData();
+        formData.append('slip', slipFile);
+        formData.append('amount', amount);
+
+        try {
+            // แก้ไข endpoint ให้ตรงกับ server
+            const response = await fetch('/payment/upload-slip', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('Failed to upload slip');
+            
+            paymentModal.style.display = 'none';
+            alert('Payment slip uploaded successfully. Waiting for approval.');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to upload payment slip');
+        }
+    };
+
+    // Close modal
+    closeBtn.onclick = () => {
+        paymentModal.style.display = 'none';
+    };
+
+    // Close modal when clicking outside
+    window.onclick = (event) => {
+        if (event.target === paymentModal) {
+            paymentModal.style.display = 'none';
+        }
+    };
+}); 

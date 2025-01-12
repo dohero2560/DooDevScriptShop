@@ -10,12 +10,14 @@ const MongoStore = require('connect-mongo');
 const winston = require('winston');
 const fetch = require('node-fetch');
 const Log = require('./models/Log');
+const path = require('path');
+const paymentRoutes = require('./routes/payment');
 
 const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -1896,5 +1898,5 @@ app.get('/api/admin/logs/:logId', isAdmin, async (req, res) => {
     }
 });
 
-
-app.use('/api/admin', require('./routes/admin'))
+app.use('/payment', paymentRoutes);
+app.use('/admin', require('./routes/admin'));
