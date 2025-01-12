@@ -1978,3 +1978,134 @@ app.use((err, req, res, next) => {
         details: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     });
 });
+
+// Admin Topup Management Routes
+app.get('/api/admin/topup-requests', isAdmin, async (req, res) => {
+    try {
+        const requests = await Topup.find()
+            .populate('userId', 'username discriminator')
+            .sort({ createdAt: -1 });
+        res.json(requests);
+    } catch (err) {
+        console.error('Error fetching topup requests:', err);
+        res.status(500).json({ error: 'Error fetching topup requests' });
+    }
+});
+
+app.post('/api/admin/topup/:requestId/approve', isAdmin, async (req, res) => {
+    try {
+        const topup = await Topup.findById(req.params.requestId);
+        if (!topup) {
+            return res.status(404).json({ error: 'Topup request not found' });
+        }
+
+        if (topup.status !== 'pending') {
+            return res.status(400).json({ error: 'Topup request already processed' });
+        }
+
+        // Update topup status
+        topup.status = 'approved';
+        topup.approvedBy = req.user._id;
+        topup.approvedAt = new Date();
+        await topup.save();
+
+        // Add points to user
+        const user = await User.findById(topup.userId);
+        const previousPoints = user.points;
+        user.points += topup.amount;
+        await user.save();
+
+        // Log the action
+        await logAdminAction(
+            req,
+            'update',
+            'points',
+            user._id,
+            {
+                before: { points: previousPoints },
+                after: { points: user.points },
+                topupId: topup._id,
+                amount: topup.amount
+            }
+        );
+
+        // Send Discord webhook notification
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            const webhookContent = {
+                embeds: [{
+                    title: '💰 Topup Approved',
+                    color: 0x00FF00,
+                    fields: [
+                        { name: 'User', value: `${user.username}#${user.discriminator}` },
+                        { name: 'Amount', value: `${topup.amount} points` },
+                        { name: 'New Balance', value: `${user.points} points` },
+                        { name: 'Approved By', value: `${req.user.username}#${req.user.discriminator}` }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, webhookContent);
+        }
+
+        res.json({ success: true, message: 'Topup approved successfully' });
+    } catch (err) {
+        console.error('Error approving topup:', err);
+        res.status(500).json({ error: 'Error approving topup' });
+    }
+});
+
+app.post('/api/admin/topup/:requestId/reject', isAdmin, async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const topup = await Topup.findById(req.params.requestId);
+        
+        if (!topup) {
+            return res.status(404).json({ error: 'Topup request not found' });
+        }
+
+        if (topup.status !== 'pending') {
+            return res.status(400).json({ error: 'Topup request already processed' });
+        }
+
+        topup.status = 'rejected';
+        topup.rejectionReason = reason;
+        await topup.save();
+
+        // Log the action
+        await logAdminAction(
+            req,
+            'update',
+            'points',
+            topup.userId,
+            {
+                action: 'reject_topup',
+                topupId: topup._id,
+                reason: reason
+            }
+        );
+
+        // Send Discord webhook notification
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            const user = await User.findById(topup.userId);
+            const webhookContent = {
+                embeds: [{
+                    title: '❌ Topup Rejected',
+                    color: 0xFF0000,
+                    fields: [
+                        { name: 'User', value: `${user.username}#${user.discriminator}` },
+                        { name: 'Amount', value: `${topup.amount} points` },
+                        { name: 'Reason', value: reason || 'No reason provided' },
+                        { name: 'Rejected By', value: `${req.user.username}#${req.user.discriminator}` }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, webhookContent);
+        }
+
+        res.json({ success: true, message: 'Topup rejected successfully' });
+    } catch (err) {
+        console.error('Error rejecting topup:', err);
+        res.status(500).json({ error: 'Error rejecting topup' });
+    }
+});
