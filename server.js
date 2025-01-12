@@ -398,9 +398,10 @@ function isValidIP(ip) {
 // Add webhook function near the top of the file
 async function sendDiscordWebhook(webhookUrl, content) {
     try {
-        console.log('Attempting to send webhook to:', webhookUrl);
-        console.log('Webhook content:', JSON.stringify(content, null, 2));
-        
+        console.log('=== SENDING WEBHOOK ===');
+        console.log('Webhook URL:', webhookUrl);
+        console.log('Content:', JSON.stringify(content, null, 2));
+
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
@@ -409,15 +410,16 @@ async function sendDiscordWebhook(webhookUrl, content) {
             body: JSON.stringify(content)
         });
         
+        const responseText = await response.text();
+        console.log('Webhook Response:', response.status, responseText);
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Failed to send webhook. Status:', response.status);
-            console.error('Error details:', errorText);
+            console.error('Failed to send webhook:', responseText);
         } else {
             console.log('Webhook sent successfully!');
         }
     } catch (error) {
-        console.error('Error sending webhook:', error);
+        console.error('Error in sendDiscordWebhook:', error);
     }
 }
 
@@ -430,6 +432,9 @@ if (process.env.DISCORD_WEBHOOK_URL) {
 
 // Update the verify-license endpoint
 app.post('/api/verify-license', async (req, res) => {
+    console.log('Starting license verification...');
+    console.log('Webhook URL configured:', !!process.env.DISCORD_WEBHOOK_URL);
+    
     const { license, serverIP, resourceName } = req.body;
     console.log('License Verification Request:', { license, serverIP, resourceName });
 
@@ -459,11 +464,12 @@ app.post('/api/verify-license', async (req, res) => {
         .populate('userId', 'username discriminator discordId');
 
         if (!purchase) {
-            console.log('Verification Failed: Invalid license -', license);
-            
+            console.log('Attempting to send webhook for failed verification...');
             // Send webhook for failed verification
             if (process.env.DISCORD_WEBHOOK_URL) {
+                console.log('Sending webhook for failed verification');
                 await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                    content: "License Verification Failed", // เพิ่ม content field
                     embeds: [{
                         title: '❌ License Verification Failed',
                         color: 0xFF0000,
@@ -476,6 +482,8 @@ app.post('/api/verify-license', async (req, res) => {
                         timestamp: new Date().toISOString()
                     }]
                 });
+            } else {
+                console.log('No webhook URL configured for failed verification');
             }
 
             return res.status(404).json({ 
@@ -579,6 +587,27 @@ app.post('/api/verify-license', async (req, res) => {
             resource: resourceName
         });
 
+        // เพิ่ม webhook สำหรับการยืนยันสำเร็จ
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            console.log('Sending webhook for successful verification');
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                content: "License Verification Successful", // เพิ่ม content field
+                embeds: [{
+                    title: '✅ License Verification Successful',
+                    color: 0x00FF00,
+                    fields: [
+                        { name: 'License', value: license },
+                        { name: 'Server IP', value: serverIP },
+                        { name: 'Resource', value: resourceName },
+                        { name: 'User', value: `${purchase.userId.username}#${purchase.userId.discriminator}` }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            });
+        } else {
+            console.log('No webhook URL configured for successful verification');
+        }
+
         res.json({ 
             valid: true,
             message: 'License verified successfully',
@@ -592,9 +621,10 @@ app.post('/api/verify-license', async (req, res) => {
     } catch (err) {
         console.error('License verification error:', err);
         
-        // Send webhook for verification error
         if (process.env.DISCORD_WEBHOOK_URL) {
+            console.log('Sending webhook for verification error');
             await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                content: "License Verification Error", // เพิ่ม content field
                 embeds: [{
                     title: '⚠️ Verification Error',
                     color: 0xFF0000,
@@ -607,6 +637,8 @@ app.post('/api/verify-license', async (req, res) => {
                     timestamp: new Date().toISOString()
                 }]
             });
+        } else {
+            console.log('No webhook URL configured for error notification');
         }
 
         res.status(500).json({ 
