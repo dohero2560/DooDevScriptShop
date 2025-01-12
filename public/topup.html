@@ -344,6 +344,47 @@
         document.addEventListener('DOMContentLoaded', () => {
             checkLoginStatus();
         });
+
+        document.getElementById('slipUploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('amount', document.getElementById('slipAmount').value);
+            formData.append('slipImage', document.getElementById('slipImage').files[0]);
+
+            try {
+                const response = await fetch('/api/payments/slip', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Payment slip submitted successfully', 'success');
+                    document.getElementById('slipUploadForm').reset();
+                    document.getElementById('imagePreview').innerHTML = '';
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        });
+
+        // Image preview
+        document.getElementById('slipImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                    `;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
     </script>
 </body>
 </html> 

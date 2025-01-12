@@ -4,6 +4,9 @@ const generatePayload = require('promptpay-qr');
 const QRCode = require('qrcode');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
+const SlipPayment = require('../models/SlipPayment');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 const PROMPTPAY_ID = process.env.PROMPTPAY_NUMBER;
 const PAYMENT_EXPIRY_MINUTES = 15;
@@ -164,6 +167,83 @@ router.get('/api/payments/:reference/status', async (req, res) => {
     } catch (error) {
         console.error('Error checking status:', error);
         res.status(500).json({ error: 'ไม่สามารถตรวจสอบสถานะได้' });
+    }
+});
+
+// Submit slip payment
+router.post('/api/payments/slip', upload.single('slipImage'), async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const { amount } = req.body;
+        if (!amount || amount < 1) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+
+        // Calculate points (1 THB = 1 point)
+        const points = Math.floor(amount);
+
+        const slipPayment = new SlipPayment({
+            userId: req.user._id,
+            amount: amount,
+            imageUrl: req.file.path,
+            points: points
+        });
+
+        await slipPayment.save();
+
+        res.json({
+            success: true,
+            message: 'Payment slip submitted successfully',
+            paymentId: slipPayment._id
+        });
+
+    } catch (error) {
+        console.error('Error submitting slip:', error);
+        res.status(500).json({ error: 'Failed to submit payment slip' });
+    }
+});
+
+// Admin: Get pending slip payments
+router.get('/api/admin/payments/slip', isAdmin, async (req, res) => {
+    try {
+        const payments = await SlipPayment.find({ status: 'pending' })
+            .populate('userId', 'username discriminator');
+        res.json(payments);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch payments' });
+    }
+});
+
+// Admin: Approve/Reject slip payment
+router.post('/api/admin/payments/slip/:id/verify', isAdmin, async (req, res) => {
+    try {
+        const { status, note } = req.body;
+        const payment = await SlipPayment.findById(req.params.id);
+        
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' });
+        }
+
+        payment.status = status;
+        payment.adminId = req.user._id;
+        payment.adminNote = note;
+        payment.updatedAt = new Date();
+
+        if (status === 'approved') {
+            const user = await User.findById(payment.userId);
+            user.points += payment.points;
+            await user.save();
+        }
+
+        await payment.save();
+
+        res.json({ success: true, message: `Payment ${status}` });
+
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to verify payment' });
     }
 });
 
