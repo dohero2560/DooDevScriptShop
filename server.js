@@ -9,6 +9,9 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const winston = require('winston');
 const fetch = require('node-fetch');
+const User = require('./models/User');
+const Script = require('./models/Script');
+const Purchase = require('./models/Purchase');
 const Log = require('./models/Log');
 
 const app = express();
@@ -38,94 +41,6 @@ app.use(passport.session());
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
-
-// User Schema
-const userSchema = new mongoose.Schema({
-    discordId: String,
-    username: String,
-    discriminator: String,
-    email: String,
-    avatar: String,
-    points: { type: Number, default: 0 },
-    cart: [{
-        scriptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Script' },
-        quantity: Number
-    }],
-    purchases: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' }],
-    isAdmin: { type: Boolean, default: false },
-    role: { type: String, enum: ['user', 'admin', 'superadmin'], default: 'user' },
-    permissions: [{
-        type: String,
-        enum: ['manage_users', 'manage_scripts', 'manage_purchases', 'manage_points']
-    }]
-});
-
-const User = mongoose.model('User', userSchema);
-
-// Script Schema
-const scriptSchema = new mongoose.Schema({
-    name: String,
-    description: String,
-    price: Number,
-    imageUrl: String,
-    features: [String],
-    compatibility: String,
-    instructions: String,
-    shortDescription: String,
-    category: String,
-    version: String,
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    downloadUrl: String,
-    authEndpoint: String,
-    resourceName: {
-        type: String,
-        required: true
-    },
-    versions: [{
-        number: {
-            type: String,
-            required: true
-        },
-        downloadUrl: {
-            type: String,
-            required: true
-        },
-        changes: [String],
-        releaseDate: {
-            type: Date,
-            default: Date.now
-        },
-        isActive: {
-            type: Boolean,
-            default: true
-        }
-    }],
-    currentVersion: {
-        type: String,
-        default: '1.0.0'
-    }
-});
-
-const Script = mongoose.model('Script',  scriptSchema);
-
-// Purchase History Schema
-const purchaseSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    scriptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Script' },
-    license: { type: String, required: true },
-    serverIP: { type: String, default: '' },
-    status: { type: String, enum: ['active', 'revoked'], default: 'active' },
-    resourceName: { type: String, default: '' },
-    purchaseDate: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-const Purchase = mongoose.model('Purchase', purchaseSchema);
 
 // Discord Authentication
 passport.use(new DiscordStrategy({
