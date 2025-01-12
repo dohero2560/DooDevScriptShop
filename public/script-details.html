@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Details - FiveM Store</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">FiveM Store</div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/purchases.html" id="purchasesLink" style="display: none;">
+                    <i class="fas fa-history"></i> Purchases
+                </a>
+                <a href="#" id="cartButton" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span id="cartCount" class="cart-count">0</span>
+                </a>
+                <div id="userInfo" style="display: none;"></div>
+                <button id="loginBtn">
+                    <i class="fab fa-discord"></i> Login with Discord
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div id="script-details" class="script-details-container"></div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Shopping Cart</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div id="cartItems"></div>
+            </div>
+        </div>
+
+        <!-- เพิ่ม Download Modal -->
+        <div id="downloadModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Download Script</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="versionsList"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/script-details.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FiveM Script Store</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+
+    
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">FiveM Store</div>
+            <div class="nav-links">
+                <a href="/" class="active">Home</a>
+                <a href="/purchases.html" id="purchasesLink" style="display: none;">
+                    <i class="fas fa-history"></i> Purchases
+                </a>
+                <a href="#" id="cartButton" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span id="cartCount" class="cart-count">0</span>
+                </a>
+                <div id="userInfo" style="display: none;"></div>
+                <button id="loginBtn">
+                    <i class="fab fa-discord"></i> Login with Discord
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="hero-section">
+            <h1>FiveM Scripts Marketplace</h1>
+            <p>Find the best scripts for your FiveM server</p>
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Shopping Cart</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div id="cartItems"></div>
+            </div>
+        </div>
+
+        <!-- Scripts Grid -->
+        <div id="scripts-container" class="scripts-grid"></div>
+    </main>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        // Initialize cart functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cart Modal
+            const modal = document.getElementById('cartModal');
+            const cartButton = document.getElementById('cartButton');
+            const closeBtn = document.getElementsByClassName('close')[0];
+
+            cartButton.onclick = function() {
+                modal.style.display = 'block';
+                updateCartDisplay();
+            }
+
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            // Initial cart update
+            updateCartDisplay();
+            checkLoginStatus();
+        });
+    </script>
+</body>
+</html>

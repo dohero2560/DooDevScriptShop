@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <span>Admin Panel</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#scripts" class="active">
+                    <i class="fas fa-code"></i>
+                    <span>Scripts</span>
+                </a>
+                <a href="#users">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </a>
+                <a href="#purchases">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Purchases</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+                <div class="user-menu">
+                    <span class="user-name">Admin</span>
+                    <img src="/img/default-avatar.png" alt="Admin" class="avatar">
+                </div>
+            </div>
+
+            <!-- Scripts Section -->
+            <div class="content-section" id="scripts-section">
+                <div class="section-header">
+                    <h2>Scripts Management</h2>
+                    <button class="add-script-btn primary-btn">
+                        <i class="fas fa-plus"></i> Add New Script
+                    </button>
+                </div>
+                <div class="card">
+                    <table id="scriptTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div class="content-section" id="users-section">
+                <div class="section-header">
+                    <h2>User Management</h2>
+                    <div class="filters">
+                        <select class="role-filter">
+                            <option value="">All Roles</option>
+                            <option value="user">Users</option>
+                            <option value="admin">Admins</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card">
+                    <table id="userTable">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Points</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="purchases-section" class="content-section">
+                <div class="filters">
+                    <div class="search-box">
+                        <input type="text" placeholder="Search purchases...">
+                    </div>
+                    <select class="status-filter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="revoked">Revoked</option>
+                    </select>
+                </div>
+                <table id="purchaseTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Script</th>
+                            <th>License</th>
+                            <th>Server IP</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+    <!-- Add Script Modal -->
+    <div id="addScriptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Script</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="addScriptForm">
+                <div class="form-group">
+                    <label>Script Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Price</label>
+                    <input type="number" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category">
+                        <option value="game">Game</option>
+                        <option value="utility">Utility</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Resource Name</label>
+                    <input type="text" name="resourceName" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Download URL</label>
+                    <input type="text" name="downloadUrl">
+                </div>
+                <div class="form-group image-group">
+                    <label>Image URL</label>
+                    <input type="url" name="imageUrl" required>
+                    <img id="imagePreview" class="image-preview" style="display: none;">
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="secondary-btn" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="primary-btn">Add Script</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Script Modal -->
+    <div id="editScriptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Script</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editScriptForm">
+                <input type="hidden" name="scriptId">
+                <div class="form-group">
+                    <label>Script Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Short Description</label>
+                    <input type="text" name="shortDescription" required>
+                </div>
+                <div class="form-group">
+                    <label>Full Description</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Price (Points)</label>
+                    <input type="number" name="price" required min="0">
+                </div>
+                <div class="form-group image-group">
+                    <label>Image URL</label>
+                    <input type="url" name="imageUrl" required>
+                    <img id="imagePreview" class="image-preview" style="display: none;">
+                </div>
+                <div class="form-group">
+                    <label>Download URL</label>
+                    <input type="url" name="downloadUrl" required>
+                </div>
+                <div class="form-group">
+                    <label>Resource Name</label>
+                    <input type="text" name="resourceName" required>
+                </div>
+                <div class="form-group">
+                    <label>Version</label>
+                    <input type="text" name="version" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category" required>
+                        <option value="game">Game</option>
+                        <option value="utility">Utility</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Features (one per line)</label>
+                    <textarea name="features" placeholder="Enter each feature on a new line"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Compatibility</label>
+                    <input type="text" name="compatibility" required>
+                </div>
+                <div class="form-group">
+                    <label>Instructions</label>
+                    <textarea name="instructions"></textarea>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="secondary-btn" onclick="adminPanel.closeEditScriptModal()">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit User</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editUserForm">
+                <input type="hidden" name="userId">
+                <div class="form-group">
+                    <label>Role</label>
+                    <select name="role" required>
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                        <option value="superadmin">Super Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Points</label>
+                    <input type="number" name="points" required>
+                </div>
+                <div class="form-group">
+                    <label>Permissions</label>
+                    <div class="permissions-list">
+                        <label>
+                            <input type="checkbox" name="permissions" value="manage_users">
+                            Manage Users
+                        </label>
+                        <label>
+                            <input type="checkbox" name="permissions" value="manage_scripts">
+                            Manage Scripts
+                        </label>
+                        <label>
+                            <input type="checkbox" name="permissions" value="manage_purchases">
+                            Manage Purchases
+                        </label>
+                        <label>
+                            <input type="checkbox" name="permissions" value="manage_points">
+                            Manage Points
+                        </label>
+                    </div>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="secondary-btn" onclick="adminPanel.closeEditUserModal()">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- เพิ่ม Version Management Modal -->
+    <div id="manageVersionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Versions</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="version-controls">
+                    <button class="primary-btn" onclick="adminPanel.showAddVersionForm()">
+                        <i class="fas fa-plus"></i> Add New Version
+                    </button>
+                </div>
+                <div id="versionsList"></div>
+                
+                <!-- Add Version Form -->
+                <form id="addVersionForm" style="display: none;">
+                    <input type="hidden" name="scriptId">
+                    <div class="form-group">
+                        <label>Version Number</label>
+                        <input type="text" name="number" required placeholder="e.g., 1.0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>Download URL</label>
+                        <input type="url" name="downloadUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Changes (one per line)</label>
+                        <textarea name="changes" rows="4" placeholder="Enter each change on a new line"></textarea>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="secondary-btn" onclick="adminPanel.hideAddVersionForm()">Cancel</button>
+                        <button type="submit" class="primary-btn">Add Version</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="addVersionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Version</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addVersionForm">
+                    <div class="form-group">
+                        <label>Version Number</label>
+                        <input type="text" name="number" required placeholder="e.g., 1.0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Download URL</label>
+                        <input type="url" name="downloadUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Changes</label>
+                        <textarea name="changes" rows="4" placeholder="Enter changes, one per line"></textarea>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="submit" class="btn btn-primary">Add Version</button>
+                        <button type="button" class="btn btn-secondary" onclick="adminPanel.hideAddVersionForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Purchase Modal -->
+    <div id="editPurchaseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Purchase</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="editPurchaseForm" onsubmit="adminPanel.savePurchaseEdit(event)">
+                <input type="hidden" name="purchaseId">
+                <div class="form-group">
+                    <label>License Key</label>
+                    <input type="text" name="license" required>
+                </div>
+                <div class="form-group">
+                    <label>Server IP</label>
+                    <input type="text" name="serverIP" placeholder="Enter server IP">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status" required>
+                        <option value="active">Active</option>
+                        <option value="revoked">Revoked</option>
+                    </select>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="secondary-btn" onclick="adminPanel.closeEditPurchaseModal()">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+
+    <style>
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+    }
+
+    .alert-danger {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+    </style>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html> 
