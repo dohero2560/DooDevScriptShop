@@ -23,6 +23,11 @@ function formatAmount(amount) {
     const satang = Math.floor(Math.random() * 99) + 1;
     // รวมจำนวนเงินและเศษสตางค์
     const totalAmount = parseFloat(amount) + (satang / 100);
+    
+    console.log('Original amount:', amount);
+    console.log('Random satang:', satang);
+    console.log('Total amount with satang:', totalAmount.toFixed(2));
+    
     return parseFloat(totalAmount.toFixed(2));
 }
 
@@ -34,6 +39,9 @@ router.post('/api/payments/generate-qr', async (req, res) => {
         }
 
         let { amount } = req.body;
+        amount = parseFloat(amount); // แปลงเป็นตัวเลขก่อน
+        
+        console.log('Received amount:', amount);
         
         if (!amount || amount < 1) {
             return res.status(400).json({ error: 'จำนวนเงินต้องมากกว่า 1 บาท' });
@@ -41,10 +49,11 @@ router.post('/api/payments/generate-qr', async (req, res) => {
 
         // แปลงจำนวนเงินให้มีเศษสตางค์
         const finalAmount = formatAmount(amount);
-        
+        console.log('Final amount with satang:', finalAmount);
+
         // สร้างข้อมูลการเติมเงิน
         const payment = new Payment({
-            userId: req.user._id,
+            userId: req.user?._id || 'test-user', // เพิ่ม fallback สำหรับการทดสอบ
             amount: finalAmount,
             reference: Date.now().toString(),
             points: Math.floor(amount), // points เท่ากับจำนวนเงินที่ตั้งใจจะเติม (ไม่รวมเศษสตางค์)
@@ -57,7 +66,7 @@ router.post('/api/payments/generate-qr', async (req, res) => {
         const payload = generatePayload(PROMPTPAY_ID, { amount: finalAmount });
         const qrCode = await QRCode.toDataURL(payload);
 
-        res.json({
+        const response = {
             success: true,
             qrCode,
             amount: finalAmount,
@@ -66,7 +75,10 @@ router.post('/api/payments/generate-qr', async (req, res) => {
             reference: payment.reference,
             promptpayId: formatPromptPayNumber(PROMPTPAY_ID),
             expiresAt: payment.expiresAt
-        });
+        };
+
+        console.log('Sending response:', response);
+        res.json(response);
 
     } catch (error) {
         console.error('Error generating QR code:', error);

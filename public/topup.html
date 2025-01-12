@@ -213,8 +213,12 @@
                         <span id="promptpayNumber">-</span>
                     </div>
                     <div class="info-item">
-                        <span>จำนวนเงิน:</span>
+                        <span>จำนวนเงินที่ต้องโอน:</span>
                         <span id="displayAmount">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Points ที่จะได้รับ:</span>
+                        <span id="displayPoints">-</span>
                     </div>
                     <div class="info-item">
                         <span>เลขอ้างอิง:</span>
@@ -250,54 +254,48 @@
         let statusCheckInterval;
 
         async function generateQR() {
-            const amount = parseFloat(document.getElementById('amount').value);
-            const loading = document.getElementById('loading');
-            const error = document.getElementById('error');
-            const qrContainer = document.getElementById('qrContainer');
-
-            if (!amount || amount <= 0) {
-                error.textContent = 'กรุณาระบุจำนวนเงินที่ถูกต้อง';
-                error.style.display = 'block';
+            const amountInput = document.getElementById('amount');
+            const amount = parseFloat(amountInput.value);
+            
+            if (!amount || amount < 1) {
+                alert('กรุณาระบุจำนวนเงินที่ถูกต้อง (ขั้นต่ำ 1 บาท)');
                 return;
             }
 
             try {
-                loading.style.display = 'block';
-                error.style.display = 'none';
-                qrContainer.style.display = 'none';
+                console.log('Sending amount:', amount);
 
                 const response = await fetch('/api/payments/generate-qr', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    credentials: 'include',
                     body: JSON.stringify({ amount })
                 });
 
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
                 if (!response.ok) {
-                    throw new Error('ไม่สามารถสร้าง QR Code ได้');
+                    throw new Error(data.error || 'Failed to generate QR code');
                 }
 
-                const data = await response.json();
-                
                 document.getElementById('qrCode').src = data.qrCode;
+                document.getElementById('qrCode').style.display = 'block';
                 document.getElementById('promptpayNumber').textContent = data.promptpayId;
-                document.getElementById('displayAmount').textContent = `${amount.toFixed(2)} บาท`;
+                document.getElementById('displayAmount').textContent = `${data.amount.toFixed(2)} บาท`;
+                document.getElementById('displayPoints').textContent = `${data.points} points`;
                 document.getElementById('reference').textContent = data.reference;
-                
-                qrContainer.style.display = 'block';
                 document.getElementById('paymentInfo').style.display = 'block';
 
-                // เริ่มนับถอยหลัง
+                // เริ่มนับถอยหลังและตรวจสอบสถานะ
                 startCountdown(new Date(data.expiresAt));
-                // เริ่มตรวจสอบสถานะ
                 startStatusCheck(data.reference);
-            } catch (err) {
-                error.textContent = err.message;
-                error.style.display = 'block';
-            } finally {
-                loading.style.display = 'none';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('เกิดข้อผิดพลาด: ' + error.message);
             }
         }
 
