@@ -862,6 +862,86 @@ class AdminPanel {
             row.style.display = rowStatus === status.toLowerCase() ? '' : 'none';
         });
     }
+
+    async loadLogs(filters = {}) {
+        try {
+            const queryParams = new URLSearchParams(filters);
+            const response = await fetch(`/api/admin/logs?${queryParams}`, {
+                credentials: 'include'
+            });
+            const logs = await response.json();
+            this.renderLogs(logs);
+        } catch (err) {
+            console.error('Error loading logs:', err);
+            this.showError('Failed to load activity logs');
+        }
+    }
+
+    renderLogs(logs) {
+        const tbody = document.querySelector('#logsTable tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = logs.map(log => `
+            <tr>
+                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                <td>${log.adminId.username}</td>
+                <td>${this.formatAction(log.action)}</td>
+                <td>${this.formatEntityType(log.entityType)}</td>
+                <td>
+                    <span class="log-details">${this.formatChanges(log.changes)}</span>
+                    <i class="fas fa-info-circle log-details-btn" 
+                        onclick="adminPanel.showLogDetails(${JSON.stringify(log)})"
+                    ></i>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    formatAction(action) {
+        const formats = {
+            create: '<span class="badge badge-success">Created</span>',
+            update: '<span class="badge badge-warning">Updated</span>',
+            delete: '<span class="badge badge-danger">Deleted</span>',
+            status_change: '<span class="badge badge-info">Status Changed</span>'
+        };
+        return formats[action] || action;
+    }
+
+    formatEntityType(type) {
+        return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+
+    formatChanges(changes) {
+        if (changes.before && changes.after) {
+            const changedFields = Object.keys(changes.after).filter(
+                key => JSON.stringify(changes.before[key]) !== JSON.stringify(changes.after[key])
+            );
+            return `Modified fields: ${changedFields.join(', ')}`;
+        }
+        return JSON.stringify(changes).slice(0, 50) + '...';
+    }
+
+    showLogDetails(log) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Log Details</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <pre>${JSON.stringify(log.changes, null, 2)}</pre>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+
+        modal.querySelector('.close').onclick = () => {
+            modal.remove();
+        };
+    }
 }
 
 // Initialize the admin panel
@@ -900,4 +980,17 @@ function setupImagePreview(formId) {
 document.addEventListener('DOMContentLoaded', function() {
     setupImagePreview('addScriptForm');
     setupImagePreview('editScriptForm');
+});
+
+// Add event listeners for filters
+document.querySelector('.log-type-filter')?.addEventListener('change', (e) => {
+    adminPanel.loadLogs({ action: e.target.value });
+});
+
+document.querySelector('.entity-type-filter')?.addEventListener('change', (e) => {
+    adminPanel.loadLogs({ entityType: e.target.value });
+});
+
+document.querySelector('.date-filter')?.addEventListener('change', (e) => {
+    adminPanel.loadLogs({ date: e.target.value });
 }); 

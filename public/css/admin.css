@@ -608,3 +608,50 @@ td small {
     display: block;
     margin-top: 2px;
 } 
+
+/* Logs Section Styles */
+.logs-container {
+  margin-top: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: auto;
+}
+
+#logsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#logsTable th,
+#logsTable td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+#logsTable th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.log-details {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-details-btn {
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+.log-type-filter,
+.entity-type-filter,
+.date-filter {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-right: 10px;
+} 

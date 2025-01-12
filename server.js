@@ -9,6 +9,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const winston = require('winston');
 const fetch = require('node-fetch');
+const Log = require('./models/Log');
 
 const app = express();
 
@@ -821,6 +822,7 @@ app.put('/api/scripts/:id', async (req, res) => {
             return res.status(400).json({ error: 'Resource Name is required' });
         }
 
+        const originalScript = await Script.findById(req.params.id);
         const updatedScript = await Script.findByIdAndUpdate(
             req.params.id,
             {
@@ -828,6 +830,18 @@ app.put('/api/scripts/:id', async (req, res) => {
                 resourceName: req.body.resourceName // อัพเดท resourceName
             },
             { new: true }
+        );
+
+        // Log the changes
+        await logAdminAction(
+            'update',
+            'script',
+            req.params.id,
+            {
+                before: originalScript,
+                after: updatedScript
+            },
+            req.user._id
         );
 
         if (!updatedScript) {
@@ -1534,6 +1548,21 @@ app.post('/api/admin/users/:userId/points/set', isAdmin, hasPermission('manage_p
         res.status(500).json({ error: 'Failed to set points' });
     }
 });
+
+// Add logging middleware
+async function logAdminAction(action, entityType, entityId, changes, adminId) {
+    try {
+        await Log.create({
+            action,
+            entityType,
+            entityId,
+            changes,
+            adminId
+        });
+    } catch (error) {
+        console.error('Error logging admin action:', error);
+    }
+}
 
 // Port
 const PORT = process.env.PORT || 3000;
