@@ -435,13 +435,26 @@ app.post('/api/verify-license', async (req, res) => {
             });
         }
 
-        // อัพเดท serverIP ทุกครั้งที่มีการเรียก API
-        purchase.serverIP = serverIP;
-        await purchase.save();
+        // ตรวจสอบ IP
+        if (purchase.serverIP && purchase.serverIP !== serverIP) {
+            console.log(`IP mismatch - Stored: ${purchase.serverIP}, Received: ${serverIP}`);
+            return res.status(403).json({
+                valid: false,
+                error: 'IP address mismatch. License is bound to a different server.'
+            });
+        }
+
+        // อัพเดท serverIP เฉพาะเมื่อยังไม่เคยตั้งค่า
+        if (!purchase.serverIP) {
+            purchase.serverIP = serverIP;
+            await purchase.save();
+            console.log(`New IP registered for license ${license}: ${serverIP}`);
+        }
 
         res.json({ 
             valid: true,
             message: 'License verified successfully',
+            serverIP: purchase.serverIP, // ส่ง IP กลับไปด้วย
             user: {
                 username: purchase.userId.username,
                 discriminator: purchase.userId.discriminator,

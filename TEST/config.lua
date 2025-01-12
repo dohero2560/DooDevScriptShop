@@ -1,6 +1,10 @@
 Config = {
-    License = 'YOUR_LICENSE_KEY', -- ใส่ License key ที่ได้จากการซื้อ
-    ResourceName = 'your_resource_name', -- ชื่อ resource ต้องตรงกับที่ลงทะเบียน
-    VerifyEndpoint = 'https://your-domain.com/api/verify-license', -- URL สำหรับ verify
-    Debug = false -- เปิด/ปิดการแสดง debug messages
-} 
+    License = 'LS-CXHXFZSJ1',
+    ResourceName = GetCurrentResourceName(),
+    VerifyEndpoint = 'https://doodevscriptshop.onrender.com//api/verify-license',
+    Debug = true,
+    AutoReconnect = true,
+    ReconnectInterval = 300000,
+    MaxRetries = 3,
+    RetryDelay = 5000
+}   
