@@ -1,13 +1,31 @@
--- ตรวจสอบ license ก่อนทำงาน
-if not IsScriptEnabled() then 
-    print('^1[ERROR] Script disabled - Invalid license^7')
-    return 
-end
+-- รอให้การตรวจสอบ license เสร็จสมบูรณ์ก่อน
+Citizen.CreateThread(function()
+    Citizen.Wait(1000) -- รอให้ระบบเริ่มต้นก่อน
+    
+    if not IsScriptEnabled() then 
+        print([[^1
+╔═══════════════════════════════════════════════╗
+║              Script Disabled!                  ║
+║         Please check your license key          ║
+╚═══════════════════════════════════════════════╝^7]])
+        return 
+    end
+    
+    print([[^2
+╔═══════════════════════════════════════════════╗
+║              Script Enabled!                   ║
+║          Everything is working fine           ║
+╚═══════════════════════════════════════════════╝^7]])
+    -- Your script initialization code here
+end)
 
 -- ตัวอย่างการใช้งานใน event
 RegisterNetEvent('yourScript:serverEvent')
 AddEventHandler('yourScript:serverEvent', function()
-    if not IsScriptEnabled() then return end
+    if not IsScriptEnabled() then 
+        PrintError('Event blocked - License not verified')
+        return 
+    end
     -- Your server event code here
 end)
 

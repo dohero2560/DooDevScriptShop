@@ -8,6 +8,7 @@ const cors = require('cors');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const winston = require('winston');
+const fetch = require('node-fetch');
 
 const app = express();
 
@@ -394,11 +395,32 @@ function isValidIP(ip) {
     });
 }
 
-// Verify license endpoint
+// Add webhook function near the top of the file
+async function sendDiscordWebhook(webhookUrl, content) {
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(content)
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to send webhook:', await response.text());
+        }
+    } catch (error) {
+        console.error('Error sending webhook:', error);
+    }
+}
+
+// Update the verify-license endpoint
 app.post('/api/verify-license', async (req, res) => {
     const { license, serverIP, resourceName } = req.body;
+    console.log('License Verification Request:', { license, serverIP, resourceName });
 
     if (!license || !serverIP || !resourceName) {
+        console.log('Verification Failed: Missing required fields');
         return res.status(400).json({ 
             valid: false,
             error: 'License, Server IP, and Resource Name are required' 
@@ -407,6 +429,7 @@ app.post('/api/verify-license', async (req, res) => {
 
     // Validate IP format
     if (!isValidIP(serverIP)) {
+        console.log('Verification Failed: Invalid IP format -', serverIP);
         return res.status(400).json({
             valid: false,
             error: 'Invalid IP address format'
@@ -422,6 +445,25 @@ app.post('/api/verify-license', async (req, res) => {
         .populate('userId', 'username discriminator discordId');
 
         if (!purchase) {
+            console.log('Verification Failed: Invalid license -', license);
+            
+            // Send webhook for failed verification
+            if (process.env.DISCORD_WEBHOOK_URL) {
+                await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                    embeds: [{
+                        title: '❌ License Verification Failed',
+                        color: 0xFF0000,
+                        fields: [
+                            { name: 'License', value: license },
+                            { name: 'Server IP', value: serverIP },
+                            { name: 'Resource', value: resourceName },
+                            { name: 'Reason', value: 'Invalid License' }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                });
+            }
+
             return res.status(404).json({ 
                 valid: false,
                 error: 'Invalid license' 
@@ -429,32 +471,104 @@ app.post('/api/verify-license', async (req, res) => {
         }
 
         if (purchase.scriptId.resourceName !== resourceName) {
+            console.log('Verification Failed: Resource name mismatch -', {
+                expected: purchase.scriptId.resourceName,
+                received: resourceName
+            });
+            
+            // Send webhook for resource mismatch
+            if (process.env.DISCORD_WEBHOOK_URL) {
+                await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                    embeds: [{
+                        title: '⚠️ Resource Name Mismatch',
+                        color: 0xFFA500,
+                        fields: [
+                            { name: 'License', value: license },
+                            { name: 'Server IP', value: serverIP },
+                            { name: 'Expected Resource', value: purchase.scriptId.resourceName },
+                            { name: 'Received Resource', value: resourceName }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                });
+            }
+
             return res.status(403).json({ 
                 valid: false,
                 error: 'Invalid resource name for this license' 
             });
         }
 
-        // ตรวจสอบ IP
+        // IP check
         if (purchase.serverIP && purchase.serverIP !== serverIP) {
-            console.log(`IP mismatch - Stored: ${purchase.serverIP}, Received: ${serverIP}`);
+            console.log('Verification Failed: IP mismatch -', {
+                stored: purchase.serverIP,
+                received: serverIP
+            });
+            
+            // Send webhook for IP mismatch
+            if (process.env.DISCORD_WEBHOOK_URL) {
+                await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                    embeds: [{
+                        title: '🚫 IP Address Mismatch',
+                        color: 0xFF0000,
+                        fields: [
+                            { name: 'License', value: license },
+                            { name: 'Stored IP', value: purchase.serverIP },
+                            { name: 'Attempted IP', value: serverIP },
+                            { name: 'Resource', value: resourceName },
+                            { name: 'User', value: `${purchase.userId.username}#${purchase.userId.discriminator}` }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                });
+            }
+
             return res.status(403).json({
                 valid: false,
                 error: 'IP address mismatch. License is bound to a different server.'
             });
         }
 
-        // อัพเดท serverIP เฉพาะเมื่อยังไม่เคยตั้งค่า
+        // Update serverIP if not set
         if (!purchase.serverIP) {
             purchase.serverIP = serverIP;
             await purchase.save();
-            console.log(`New IP registered for license ${license}: ${serverIP}`);
+            console.log('New IP registered:', {
+                license,
+                serverIP,
+                user: `${purchase.userId.username}#${purchase.userId.discriminator}`
+            });
+            
+            // Send webhook for new IP registration
+            if (process.env.DISCORD_WEBHOOK_URL) {
+                await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                    embeds: [{
+                        title: '✅ New IP Registered',
+                        color: 0x00FF00,
+                        fields: [
+                            { name: 'License', value: license },
+                            { name: 'Server IP', value: serverIP },
+                            { name: 'Resource', value: resourceName },
+                            { name: 'User', value: `${purchase.userId.username}#${purchase.userId.discriminator}` }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
+                });
+            }
         }
+
+        console.log('Verification Successful:', {
+            license,
+            serverIP,
+            user: `${purchase.userId.username}#${purchase.userId.discriminator}`,
+            resource: resourceName
+        });
 
         res.json({ 
             valid: true,
             message: 'License verified successfully',
-            serverIP: purchase.serverIP, // ส่ง IP กลับไปด้วย
+            serverIP: purchase.serverIP,
             user: {
                 username: purchase.userId.username,
                 discriminator: purchase.userId.discriminator,
@@ -463,6 +577,24 @@ app.post('/api/verify-license', async (req, res) => {
         });
     } catch (err) {
         console.error('License verification error:', err);
+        
+        // Send webhook for verification error
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, {
+                embeds: [{
+                    title: '⚠️ Verification Error',
+                    color: 0xFF0000,
+                    fields: [
+                        { name: 'License', value: license },
+                        { name: 'Server IP', value: serverIP },
+                        { name: 'Resource', value: resourceName },
+                        { name: 'Error', value: err.message }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            });
+        }
+
         res.status(500).json({ 
             valid: false,
             error: 'Error verifying license' 

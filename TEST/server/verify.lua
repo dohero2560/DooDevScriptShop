@@ -1,36 +1,91 @@
 local isVerified = false
+local isVerifying = false
 local lastVerificationTime = 0
 
 -- Forward declarations
 local VerifyLicense
 
+local function PrintHeader()
+    print([[^2
+╔═══════════════════════════════════════════════╗
+║             DoDev License System              ║
+╚═══════════════════════════════════════════════╝^7]])
+end
+
+local function PrintSuccess(message)
+    print('^2[SUCCESS] ^7' .. message)
+end
+
+local function PrintError(message)
+    print('^1[ERROR] ^7' .. message)
+end
+
+local function PrintInfo(message)
+    print('^5[INFO] ^7' .. message)
+end
+
+local function PrintWarning(message)
+    print('^3[WARNING] ^7' .. message)
+end
+
 local function LogDebug(message)
     if Config.Debug then
-        print('^3[License Debug] ^7' .. message)
+        print('^6[DEBUG] ^7' .. message)
     end
+end
+
+local function ValidateIP(ip)
+    if not ip or ip == "" or ip == "0.0.0.0" then
+        LogDebug('Invalid IP: Empty or default IP detected')
+        return false
+    end
+
+    local parts = {ip:match("(%d+)%.(%d+)%.(%d+)%.(%d+)")}
+    if #parts ~= 4 then
+        LogDebug('Invalid IP format: ' .. ip)
+        return false
+    end
+
+    for _, part in ipairs(parts) do
+        local num = tonumber(part)
+        if not num or num < 0 or num > 255 then
+            LogDebug('Invalid IP range: ' .. ip)
+            return false
+        end
+    end
+    return true
 end
 
 local function GetServerIP()
     local ip = "0.0.0.0"
+    local ipReceived = false
     
     PerformHttpRequest("https://api.ipify.org", function(errorCode, resultData, resultHeaders)
-        if errorCode == 200 then
-            ip = resultData
-            LogDebug('IP from ipify: ' .. ip)
+        if errorCode == 200 and resultData then
+            ip = resultData:gsub("\n", ""):gsub(" ", "")
+            if ValidateIP(ip) then
+                ipReceived = true
+                LogDebug('Valid IP from ipify: ' .. ip)
+            else
+                LogDebug('Invalid IP received from ipify: ' .. ip)
+            end
         else
             LogDebug('Failed to get IP from ipify, error: ' .. tostring(errorCode))
-            -- Fallback to default method
-            ip = GetConvar("ip", "0.0.0.0")
-            LogDebug('Using fallback IP: ' .. ip)
         end
     end, 'GET', '', { ['Accept'] = 'text/plain' })
     
-    -- Wait briefly for the async request to complete
-    Citizen.Wait(1000)
+    -- Wait for response with timeout
+    local timeout = 0
+    while not ipReceived and timeout < 50 do
+        Citizen.Wait(100)
+        timeout = timeout + 1
+    end
     
-    -- Clean the IP just in case
-    ip = ip:gsub("http://", ""):gsub("https://", ""):gsub("/", ""):gsub("\n", ""):gsub(" ", "")
-    LogDebug('Final IP: ' .. ip)
+    if not ValidateIP(ip) then
+        LogDebug('Final IP validation failed: ' .. ip)
+        return nil
+    end
+    
     return ip
 end
 
@@ -45,27 +100,44 @@ local function HandleVerificationFailure(retry)
     end
 end
 
+local function WaitForVerification()
+    local timeout = 0
+    while isVerifying and timeout < 100 do -- รอสูงสุด 10 วินาที
+        Citizen.Wait(100)
+        timeout = timeout + 1
+    end
+    return isVerified
+end
+
 -- Implement VerifyLicense
 VerifyLicense = function(retry)
     retry = retry or 0
+    isVerifying = true
     
     if retry == 0 then
-        LogDebug('Starting license verification...')
+        PrintHeader()
+        PrintInfo('Starting license verification...')
     else
-        LogDebug('Retrying verification... (Attempt ' .. retry + 1 .. '/' .. Config.MaxRetries .. ')')
+        PrintWarning('Retrying verification... (Attempt ' .. retry + 1 .. '/' .. Config.MaxRetries .. ')')
     end
     
-    -- Log request data
+    local serverIP = GetServerIP()
+    if not serverIP then
+        LogDebug('Failed to get valid server IP. Verification aborted.')
+        isVerifying = false
+        HandleVerificationFailure(retry)
+        return false
+    end
+    
     local requestData = {
         license = Config.License,
-        serverIP = GetServerIP(),
+        serverIP = serverIP,
         resourceName = Config.ResourceName
     }
     LogDebug('Request Data: ' .. json.encode(requestData))
     
     PerformHttpRequest(Config.VerifyEndpoint, function(errorCode, resultData, resultHeaders)
         LogDebug('Response Code: ' .. tostring(errorCode))
-        LogDebug('Response Data: ' .. tostring(resultData))
         
         if errorCode == 200 then
             local success, data = pcall(json.decode, resultData)
@@ -73,32 +145,40 @@ VerifyLicense = function(retry)
                 if data.valid then
                     isVerified = true
                     lastVerificationTime = os.time()
-                    LogDebug('License verified successfully!')
+                    
+                    print([[^2
+╔═══════════════════════════════════════════════╗
+║              License Verified!                 ║
+╠═══════════════════════════════════════════════╣
+║^7 Discord: ]] .. data.user.username .. '#' .. data.user.discriminator .. [[                  ^2
+║^7 License: ]] .. Config.License .. [[                ^2
+║^7 Resource: ]] .. Config.ResourceName .. [[               ^2
+╚═══════════════════════════════════════════════╝^7]])
+                    
                     TriggerEvent('yourScript:licenseVerified')
                 else
-                    LogDebug('Verification failed: ' .. (data.error or 'Unknown error'))
+                    local errorMsg = data.error or 'Invalid license'
+                    PrintError('Verification failed: ' .. errorMsg)
+                    isVerified = false
                     HandleVerificationFailure(retry)
                 end
             else
-                LogDebug('Invalid response format')
+                PrintError('Invalid response format')
+                isVerified = false
                 HandleVerificationFailure(retry)
             end
         else
-            -- แสดงข้อมูล error ที่ละเอียดขึ้น
-            LogDebug('Full error details:')
-            LogDebug('Status: ' .. errorCode)
-            LogDebug('Response: ' .. tostring(resultData))
-            if resultHeaders then
-                for k, v in pairs(resultHeaders) do
-                    LogDebug('Header ' .. k .. ': ' .. tostring(v))
-                end
-            end
+            PrintError('HTTP Error: ' .. errorCode)
+            isVerified = false
             HandleVerificationFailure(retry)
         end
+        isVerifying = false
     end, 'POST', json.encode(requestData), { 
         ['Content-Type'] = 'application/json',
         ['Accept'] = 'application/json'
     })
+    
+    return WaitForVerification()
 end
 
 local function StartAutoReconnect()
@@ -118,9 +198,12 @@ end
 AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() ~= resourceName then return end
     
-    LogDebug('Resource starting - Initiating license verification')
-    VerifyLicense()
-    StartAutoReconnect()
+    if VerifyLicense() then
+        PrintSuccess('Script enabled successfully!')
+        StartAutoReconnect()
+    else
+        PrintError('Script disabled - License verification failed')
+    end
 end)
 
 exports('isLicenseVerified', function()
@@ -132,6 +215,10 @@ exports('getLastVerificationTime', function()
 end)
 
 function IsScriptEnabled()
+    if isVerifying then
+        LogDebug('Waiting for verification to complete...')
+        return WaitForVerification()
+    end
     if not isVerified then
         LogDebug('Access blocked: License not verified')
         return false
