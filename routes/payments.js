@@ -11,7 +11,19 @@ if (!PROMPTPAY_ID) {
     console.error('Warning: PROMPTPAY_NUMBER is not set in .env file');
 }
 
-const PAYMENT_EXPIRY_MINUTES = 15; // QR Code หมดอายุใน 15 นาที
+// Function to format PromptPay number
+function formatPromptPayNumber(number) {
+    if (!number) return '';
+    // ถ้าเป็นเบอร์มือถือ (10 หลัก)
+    if (number.length === 10) {
+        return number.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    }
+    // ถ้าเป็นเลขบัตรประชาชน (13 หลัก)
+    if (number.length === 13) {
+        return number.replace(/(\d{1})(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5');
+    }
+    return number;
+}
 
 // Middleware ตรวจสอบการล็อกอิน
 const isAuthenticated = (req, res, next) => {
@@ -45,7 +57,7 @@ router.post('/api/payments/generate-qr', async (req, res) => {
             amount: amount,
             reference: Date.now().toString(),
             points: Math.floor(amount), // 1 บาท = 1 point
-            expiresAt: new Date(Date.now() + PAYMENT_EXPIRY_MINUTES * 60000)
+            expiresAt: new Date(Date.now() + 15 * 60000) // 15 minutes
         });
 
         // Generate PromptPay payload
@@ -54,18 +66,15 @@ router.post('/api/payments/generate-qr', async (req, res) => {
         // Generate QR Code
         const qrCode = await QRCode.toDataURL(payload);
         
-        // Format PromptPay ID for display (if it's a phone number)
-        let displayId = PROMPTPAY_ID;
-        if (PROMPTPAY_ID.length === 10) {
-            displayId = PROMPTPAY_ID.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
-        }
+        // Format PromptPay ID for display
+        const formattedPromptPay = formatPromptPayNumber(PROMPTPAY_ID);
 
         res.json({
             success: true,
             qrCode,
             amount,
             reference: payment.reference,
-            promptpayId: displayId,
+            promptpayId: formattedPromptPay,
             expiresAt: payment.expiresAt
         });
 
