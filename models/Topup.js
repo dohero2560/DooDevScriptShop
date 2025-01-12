@@ -6,6 +6,14 @@ const topupSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    discordId: {
+        type: String,
+        required: true
+    },
+    username: {
+        type: String,
+        required: true 
+    },
     amount: {
         type: Number,
         required: true,

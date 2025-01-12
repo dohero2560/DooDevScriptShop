@@ -50,36 +50,37 @@ router.post('/', isAuthenticated, upload.single('slip'), async (req, res) => {
 
         const topup = new Topup({
             userId: req.user._id,
-            amount: parseFloat(amount),
+            discordId: req.user.discordId,
+            username: req.user.username,
+            amount: Number(amount),
             slipUrl: `/uploads/slips/${req.file.filename}`,
             status: 'pending'
         });
 
         await topup.save();
+        // console.log('Topup created:', {
+        //     userId: topup.userId,
+        //     amount: topup.amount,
+        //     slipUrl: topup.slipUrl
+        // });
 
-        console.log('Topup created:', {
-            userId: topup.userId,
-            amount: topup.amount,
-            slipUrl: topup.slipUrl
-        });
-
-        res.status(201).json({
-            success: true,
-            topup: {
-                id: topup._id,
-                amount: topup.amount,
-                slipUrl: topup.slipUrl,
-                status: topup.status,
-                createdAt: topup.createdAt
-            }
+        // res.status(201).json({
+        //     success: true,
+        //     topup: {
+        //         id: topup._id,
+        //         amount: topup.amount,
+        //         slipUrl: topup.slipUrl,
+        //         status: topup.status,
+        //         createdAt: topup.createdAt
+        //     }
+        res.json({ 
+            message: 'Slip uploaded successfully',
+            topup
         });
 
     } catch (err) {
-        console.error('Error in topup upload:', err);
-        res.status(500).json({ 
-            error: 'Error creating topup request',
-            details: err.message 
-        });
+        console.error('Error uploading slip:', err);
+        res.status(500).json({ error: 'Error uploading slip' });
     }
 });
 
