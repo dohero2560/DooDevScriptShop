@@ -398,6 +398,9 @@ function isValidIP(ip) {
 // Add webhook function near the top of the file
 async function sendDiscordWebhook(webhookUrl, content) {
     try {
+        console.log('Attempting to send webhook to:', webhookUrl);
+        console.log('Webhook content:', JSON.stringify(content, null, 2));
+        
         const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
@@ -407,11 +410,22 @@ async function sendDiscordWebhook(webhookUrl, content) {
         });
         
         if (!response.ok) {
-            console.error('Failed to send webhook:', await response.text());
+            const errorText = await response.text();
+            console.error('Failed to send webhook. Status:', response.status);
+            console.error('Error details:', errorText);
+        } else {
+            console.log('Webhook sent successfully!');
         }
     } catch (error) {
         console.error('Error sending webhook:', error);
     }
+}
+
+// เพิ่ม log ตรวจสอบ webhook URL ในส่วนที่เรียกใช้
+if (process.env.DISCORD_WEBHOOK_URL) {
+    console.log('Discord webhook URL is configured');
+} else {
+    console.log('Discord webhook URL is not configured');
 }
 
 // Update the verify-license endpoint
