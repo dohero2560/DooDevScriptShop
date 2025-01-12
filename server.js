@@ -108,7 +108,7 @@ const scriptSchema = new mongoose.Schema({
     }
 });
 
-const Script = mongoose.model('Script', scriptSchema);
+const Script = mongoose.model('Script',  scriptSchema);
 
 // Purchase History Schema
 const purchaseSchema = new mongoose.Schema({
@@ -293,6 +293,7 @@ app.post('/api/cart/checkout', async (req, res) => {
         const user = await User.findById(req.user._id);
         let totalCost = 0;
         const purchases = [];
+        const purchaseDetails = []; // เก็บรายละเอียดสำหรับ logging
         
         // Calculate total cost and create purchases
         for (const item of user.cart) {
@@ -311,6 +312,14 @@ app.post('/api/cart/checkout', async (req, res) => {
                 resourceName: script.resourceName
             });
             purchases.push(purchase);
+            
+            // เก็บรายละเอียดสำหรับ logging
+            purchaseDetails.push({
+                scriptName: script.name,
+                price: script.price,
+                license: purchase.license,
+                resourceName: script.resourceName
+            });
         }
         
         // Check if user has enough points
@@ -328,10 +337,66 @@ app.post('/api/cart/checkout', async (req, res) => {
             user.purchases.push(purchase._id);
         }
         
+        // เก็บข้อมูลก่อนอัพเดท points
+        const previousPoints = user.points;
+        
         // Deduct points and clear cart
         user.points -= totalCost;
         user.cart = [];
         await user.save();
+
+        // Create log entry for the purchase
+        await logAdminAction(
+            req,
+            'create',
+            'purchase',
+            purchases.map(p => p._id), // เก็บ ID ของทุก purchase
+            {
+                before: {
+                    userPoints: previousPoints,
+                    cartItems: purchaseDetails.length
+                },
+                after: {
+                    userPoints: user.points,
+                    purchases: purchaseDetails,
+                    totalCost: totalCost
+                },
+                changedFields: ['points', 'purchases', 'cart']
+            }
+        );
+        
+        // Send Discord webhook notification
+        if (process.env.DISCORD_WEBHOOK_URL) {
+            const webhookContent = {
+                embeds: [{
+                    title: '🛒 New Purchase',
+                    color: 0x00FF00,
+                    fields: [
+                        {
+                            name: 'User',
+                            value: `${user.username}#${user.discriminator}`
+                        },
+                        {
+                            name: 'Total Cost',
+                            value: `${totalCost} points`
+                        },
+                        {
+                            name: 'Items',
+                            value: purchaseDetails.map(p => 
+                                `${p.scriptName} (${p.license})`
+                            ).join('\n')
+                        },
+                        {
+                            name: 'Remaining Points',
+                            value: `${user.points}`
+                        }
+                    ],
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            
+            await sendDiscordWebhook(process.env.DISCORD_WEBHOOK_URL, webhookContent);
+        }
         
         res.json({ 
             success: true, 
