@@ -16,6 +16,8 @@ const QRCode = require('qrcode');
 const TopUp = require('./models/TopUp');
 const vision = require('@google-cloud/vision');
 const client = new vision.ImageAnnotatorClient();
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 
@@ -134,12 +136,24 @@ const Purchase = mongoose.model('Purchase', purchaseSchema);
 
 // Configure multer for slip uploads
 const storage = multer.diskStorage({
-    destination: 'uploads/slips',
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'uploads/slips');
+        cb(null, uploadDir);
+    },
     filename: (req, file, cb) => {
         cb(null, Date.now() + '-' + file.originalname);
     }
 });
 const upload = multer({ storage });
+
+// สร้างโฟลเดอร์ถ้ายังไม่มี
+const uploadDir = path.join(__dirname, 'uploads/slips');
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// เพิ่ม route สำหรับเข้าถึงไฟล์
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Generate PromptPay QR Code
 app.post('/api/generate-promptpay-qr', async (req, res) => {
@@ -2035,4 +2049,8 @@ app.get('/api/admin/logs/:logId', isAdmin, async (req, res) => {
         console.error('Error fetching log details:', err);
         res.status(500).json({ error: 'Error fetching log details' });
     }
+});
+
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
 });
