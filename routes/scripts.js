@@ -50,6 +50,28 @@ router.get('/:id/download/:version', authenticateUser, async (req, res) => {
     }
 });
 
+// ดึงรายการเวอร์ชันที่เปิดใช้งาน
+router.get('/api/scripts/:id/versions', async (req, res) => {
+    try {
+        const script = await Script.findById(req.params.id);
+        if (!script) return res.status(404).json({ error: 'Script not found' });
+
+        // ส่งเฉพาะเวอร์ชันที่เปิดใช้งาน
+        const activeVersions = script.versions
+            .filter(v => v.isActive)
+            .map(v => ({
+                number: v.number,
+                releaseDate: v.releaseDate,
+                changes: v.changes
+            }));
+
+        res.json(activeVersions);
+    } catch (err) {
+        console.error('Error fetching versions:', err);
+        res.status(500).json({ error: 'Error fetching versions' });
+    }
+});
+
 // ดาวน์โหลดเวอร์ชันที่ระบุ
 router.get('/api/scripts/:scriptId/download/:version', authenticateUser, async (req, res) => {
     try {

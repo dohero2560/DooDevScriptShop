@@ -8,7 +8,6 @@ const cors = require('cors');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const winston = require('winston');
-const axios = require('axios');
 
 const app = express();
 
@@ -378,75 +377,11 @@ app.get('/api/purchases', async (req, res) => {
     }
 });
 
-// Discord Webhook Function
-async function sendDiscordWebhook(type, data) {
-    try {
-        const webhookUrl = type === 'alert' 
-            ? process.env.DISCORD_ALERT_WEBHOOK_URL 
-            : process.env.DISCORD_WEBHOOK_URL;
-
-        const embed = {
-            title: type === 'alert' ? '⚠️ License Alert' : '✅ License Verification',
-            color: type === 'alert' ? 16711680 : 65280, // Red for alert, Green for success
-            fields: [
-                {
-                    name: 'License',
-                    value: data.license || 'N/A',
-                    inline: true
-                },
-                {
-                    name: 'Server IP',
-                    value: data.serverIP || 'N/A',
-                    inline: true
-                },
-                {
-                    name: 'Resource',
-                    value: data.resourceName || 'N/A',
-                    inline: true
-                }
-            ],
-            timestamp: new Date().toISOString()
-        };
-
-        if (data.user) {
-            embed.fields.push({
-                name: 'User',
-                value: `${data.user.username}#${data.user.discriminator}`,
-                inline: true
-            });
-        }
-
-        await axios.post(webhookUrl, {
-            embeds: [embed]
-        });
-
-    } catch (err) {
-        console.error('Discord Webhook Error:', err);
-    }
-}
-
-// Update verify-license endpoint
+// Verify license endpoint
 app.post('/api/verify-license', async (req, res) => {
     const { license, serverIP, resourceName } = req.body;
 
-    // Log verification attempt
-    console.log('\n=== License Verification Attempt ===');
-    console.log('Time:', new Date().toISOString());
-    console.log('License:', license);
-    console.log('Server IP:', serverIP);
-    console.log('Resource:', resourceName);
-
     if (!license || !serverIP || !resourceName) {
-        console.log('❌ Validation Failed: Missing required fields');
-        
-        // Send alert to Discord
-        await sendDiscordWebhook('alert', {
-            license,
-            serverIP,
-            resourceName,
-            error: 'Missing required fields'
-        });
-
         return res.status(400).json({ 
             valid: false,
             error: 'License, Server IP, and Resource Name are required' 
@@ -462,16 +397,6 @@ app.post('/api/verify-license', async (req, res) => {
         .populate('userId', 'username discriminator discordId');
 
         if (!purchase) {
-            console.log('❌ Verification Failed: Invalid license');
-            
-            // Send alert to Discord
-            await sendDiscordWebhook('alert', {
-                license,
-                serverIP,
-                resourceName,
-                error: 'Invalid license'
-            });
-
             return res.status(404).json({ 
                 valid: false,
                 error: 'Invalid license' 
@@ -479,40 +404,14 @@ app.post('/api/verify-license', async (req, res) => {
         }
 
         if (purchase.scriptId.resourceName !== resourceName) {
-            console.log('❌ Verification Failed: Invalid resource name');
-            
-            // Send alert to Discord
-            await sendDiscordWebhook('alert', {
-                license,
-                serverIP,
-                resourceName,
-                user: purchase.userId,
-                error: 'Invalid resource name'
-            });
-
             return res.status(403).json({ 
                 valid: false,
                 error: 'Invalid resource name for this license' 
             });
         }
 
-        // Update server IP
         purchase.serverIP = serverIP;
         await purchase.save();
-
-        // Log successful verification
-        console.log('✅ Verification Successful');
-        console.log('User:', purchase.userId.username + '#' + purchase.userId.discriminator);
-        console.log('Discord ID:', purchase.userId.discordId);
-        console.log('=================================\n');
-
-        // Send success webhook
-        await sendDiscordWebhook('success', {
-            license,
-            serverIP,
-            resourceName,
-            user: purchase.userId
-        });
 
         res.json({ 
             valid: true,
@@ -524,16 +423,7 @@ app.post('/api/verify-license', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('❌ Verification Error:', err);
-        
-        // Send alert to Discord
-        await sendDiscordWebhook('alert', {
-            license,
-            serverIP,
-            resourceName,
-            error: err.message
-        });
-
+        console.error('License verification error:', err);
         res.status(500).json({ 
             valid: false,
             error: 'Error verifying license' 
@@ -1266,13 +1156,3 @@ app.use((req, res, next) => {
     });
     next();
 });
-
-// Log Admin Actions
-const logAdminAction = (req, action) => {
-    logger.info({
-        action,
-        user: req.user.username,
-        ip: req.ip,
-        timestamp: new Date()
-    });
-};
